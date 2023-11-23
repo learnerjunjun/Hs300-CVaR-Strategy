@@ -1,0 +1,11 @@
+\babel@toc {nil}{}\relax 
+\beamer@sectionintoc {1}{研究背景}{3}{0}{1}
+\beamer@subsectionintoc {1}{1}{改进期望收益}{3}{0}{1}
+\beamer@subsectionintoc {1}{2}{改进风险度量}{4}{0}{1}
+\beamer@sectionintoc {2}{理论模型}{5}{0}{2}
+\beamer@subsectionintoc {2}{1}{资产及收益率}{5}{0}{2}
+\beamer@subsectionintoc {2}{2}{VaR及CVaR}{6}{0}{2}
+\beamer@subsectionintoc {2}{3}{CVaR计算}{7}{0}{2}
+\beamer@subsectionintoc {2}{4}{优化问题建模}{8}{0}{2}
+\beamer@sectionintoc {3}{数据实验}{9}{0}{3}
+\beamer@sectionintoc {4}{不足与改进}{10}{0}{4}

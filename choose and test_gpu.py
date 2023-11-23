@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 import torch
+import warnings
+warnings.filterwarnings('ignore')
 
 ## 定义参数类
 # -- define a class including all parameters
@@ -141,8 +143,8 @@ while end_date <= 293:
                               n_estimators=para.xgbc_n_estimators,  # 迭代次数
                               learning_rate=para.xgbc_learning_rate,  # 减小每一步的权重，提高robust
                               subsample=para.xgbc_subsample_C,  # 随机采样比例
-                              max_depth=para.xgbc_max_depth)# 控制深度，避免过拟合
-                              #tree_method="hist", device="cuda")
+                              max_depth=para.xgbc_max_depth,# 控制深度，避免过拟合
+                              tree_method="hist", device="cuda")
     # 有监督，连续型数据
     # -- linear regression
     if para.method == 'LR':

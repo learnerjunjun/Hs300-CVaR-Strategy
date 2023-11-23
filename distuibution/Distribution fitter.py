@@ -8,7 +8,7 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 #数据导入
-path_data = './data/csv_01/'
+path_data = '../data/csv_01/'
 start_date = 82
 end_date = 294
 period_train=range(start_date,end_date+1)
@@ -37,7 +37,7 @@ selected_stocks = pd.Series(unique_stocks).sample(n=10, random_state=0).tolist()
 # 定义要拟合的分布列表
 distributions = ['expon', 'gamma','dgamma', 'norm','lognorm','skewnorm','laplace_asymmetric','laplace','loglaplace','genhyperbolic','tukeylambda','johnsonsu']
 # 创建一个空的DataFrame用于存储拟合结果
-fit_results = pd.DataFrame(columns=['Stock', 'Best Fit Distribution', 'Best Fit Parameters'])
+fit_results = pd.DataFrame(columns=['Stock', 'Best Fit Distribution', 'Best Fit Parameters','Alpha','Quantile'])
 # 遍历选定的股票
 for stock in selected_stocks:
     stock_data = df[df['stock'] == stock]
@@ -52,18 +52,25 @@ for stock in selected_stocks:
     #f.fitted_pdf  # 使用最适合数据分布的分布参数生成的概率密度
     # 获取最佳拟合分布和参数
     best_summary = f.get_best(method='sumsquare_error')
-    best_fit_name = best_summary.keys()
-    best_fit_params = best_summary.values()
+    best_fit_name = list(best_summary.keys())[0]
+    best_fit_params = list(best_summary.values())[0]
+    # 计算分位数 / VaR
+    alpha=1 #置信水平下的分位数
+    returns_np=np.array(returns)
+    quantile=np.percentile(returns_np,alpha)
     # 将拟合结果存储到DataFrame中
-    fit_results.loc[len(fit_results)] = [stock, best_fit_name, best_fit_params]
+    fit_results.loc[len(fit_results)] = [stock, best_fit_name, best_fit_params,alpha,quantile]
     #绘图
     #f.hist()  # 绘制组数=bins的标准化直方图
     #f.plot_pdf(names=None, Nbest=3, lw=2)  # 绘制分布的概率密度函数
     plt.xlabel('Values')
     plt.ylabel('PDF or Frequence')
     plt.title('Data Distribution')
+    filename = stock + ".png"
+    plt.savefig(filename, dpi=300)
     plt.show()
-print(fit_results)
+print(fit_results.to_string())
+fit_results.to_excel("distribution and quantile.xlsx", index=False)
 
 # Summary: 从4848只股票中随机选取10个股票的收益分布并非正态分布
 # Ressults:
