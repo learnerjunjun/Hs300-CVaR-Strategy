@@ -269,3 +269,9 @@ By 11.12
 ## Black-Litterman
 
 * Making decision
+
+## Refer_web
+
+- https://www.value-at-risk.net/value-at-risk/
+- https://www.bananaspace.org/wiki/累积分布函数#:~:text=在概率论中%2C%20累积,随机变量的概率分布./
+- 

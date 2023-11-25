@@ -7,7 +7,7 @@ import torch
 # -- define a class including all parameters
 
 class Para():
-    method = 'XGBOOST-C'  # 'LOGI' 'XGBOOST-C' 'LR'
+    method = 'LR'  # 'LOGI' 'XGBOOST-C' 'LR'
     month_in_sample = range(82, 153 + 1)  # -- return 82~153 72 months
     month_test = range(154, 293 + 1)  # -- return 154~293 140 months
 
@@ -306,12 +306,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import svm
 import xgboost as xgb
 import warnings
-
 warnings.filterwarnings('ignore')
 
 n_folds = 20  # 设置交叉检验的次数
+cv_score_list = []  # 交叉检验结果列表
 if para.method in ['LOGI', 'XGBOOST-C']:
-    cv_score_list = []  # 交叉检验结果列表
     model.fit(X_train, y_train)
     # -- y_pred: binary format; y_score: continious format
     y_pred_train = model.predict(X_train)
