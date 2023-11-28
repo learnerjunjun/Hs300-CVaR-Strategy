@@ -1,3 +1,5 @@
+#TODO: 1.筛选有效因子 2.均值方差投资策略 3.VaR 及 CVaR计算；
+
 #导入包
 import numpy as np
 import pandas as pd
