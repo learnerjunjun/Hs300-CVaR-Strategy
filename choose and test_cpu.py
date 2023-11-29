@@ -1,7 +1,8 @@
 #导入包
 import numpy as np
 import pandas as pd
-import torch
+import warnings
+warnings.filterwarnings('ignore')
 
 ## 定义参数类
 # -- define a class including all parameters

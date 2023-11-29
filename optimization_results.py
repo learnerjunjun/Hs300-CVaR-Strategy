@@ -3,8 +3,15 @@
 #导入包
 import numpy as np
 import pandas as pd
+import datetime
 import warnings
 warnings.filterwarnings('ignore')
+
+#hs300名单 2022.1.1之前
+hs300=pd.read_csv(r'../hs300_2005-2022/hs300_monthly.csv',dtype = object)
+hs300=hs300.drop('Unnamed: 0',axis=1)
+hs300=hs300.rename(columns={'stock': 'code'})
+hs300['month']=hs300['month'].astype(int)
 
 ## 定义参数类
 # -- define a class including all parameters
@@ -21,6 +28,7 @@ class Para():
     n_stock = 5166
 para = Para()
 
+# 训练时间定义
 train_data_min_months = 72  # 每次模型训练所用数据最少不低于
 train_data_max_months = 108  # 每次模型训练所用数据最大不超过
 train_update_months = 6  # 设置更新周期
@@ -38,12 +46,17 @@ for i_month in period_train:
     para.n_stock = data_curr_month.shape[0]
     # -- remove nan
     data_curr_month = data_curr_month.dropna(axis=0)
+    # return data merge
     a1.iloc[data_curr_month.index, i_month-1] = data_curr_month['return'][data_curr_month.index]
     # -- merge
     if i_month == period_train[0]:  # -- first month
-        data_in_sample = data_curr_month
+        data_in_sample_all = data_curr_month
     else:
-        data_in_sample = pd.concat((data_in_sample, data_curr_month), axis=0)
+        data_in_sample_all = pd.concat((data_in_sample_all, data_curr_month), axis=0)
+    data_in_sample_all['code'] = data_in_sample_all['stock'].str.replace('[^\d]', '', regex=True)
+
+# 筛选出名单内的hs300
+data_in_sample=pd.merge(hs300,data_in_sample_all,on=['code','month'],how='inner')
 
 # 样本内数据集
 # -- generate in-sample data
@@ -95,6 +108,9 @@ for i_month in period_test:
     data_curr_month = pd.read_csv(file_name, header=0)
     # -- remove nan
     data_curr_month = data_curr_month.dropna(axis=0)
+    # --hs300
+    data_curr_month['code'] = data_curr_month['stock'].str.replace('[^\d]', '', regex=True)
+    data_curr_month = pd.merge(hs300, data_curr_month, on=['code', 'month'], how='inner')
     # -- generate X
     X_curr_month = data_curr_month.loc[:, 'EP':'bias']
     # -- pca
