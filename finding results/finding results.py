@@ -35,14 +35,17 @@ end_date = start_date + train_data_min_months  # 第一次滚动训练结束日�
 
 
 # 创建一个空的DataFrame
-return_data_combined = pd.DataFrame()
-weights_data_combined = pd.DataFrame()
+return_data_combined_1 = pd.DataFrame()
+weights_data_combined_1 = pd.DataFrame()
+return_data_combined_2 = pd.DataFrame()
+weights_data_combined_2 = pd.DataFrame()
+return_data_combined_3 = pd.DataFrame()
+weights_data_combined_3 = pd.DataFrame()
 
-while end_date <= 293:
+while end_date <= 284:
     period_train = range(start_date, end_date + 1)
     ## 生成样本内数据集
     # -- generate in-sample data
-    period_train = range(start_date, end_date + 1)
     a1 = pd.DataFrame([np.nan] * np.zeros((para.n_stock, period_train[-1])))
     for i_month in period_train:
         # -- load csv
@@ -135,6 +138,25 @@ while end_date <= 293:
     weighted_factors_coefficient = assign_weight_by_coefficient(information_coefficient)
     factor_weights_2 = np.array(weighted_factors_coefficient['Weight'])
 
+    #基于回归系数
+    # 获取回归系数
+    coefficients = model.coef_
+    # 计算因子权重
+    factor_weights_1 = abs(coefficients) / sum(abs(coefficients))
+
+    # 基于协方差矩阵
+    covariance_matrix = X_in_sample.cov()
+    # 计算协方差矩阵的逆
+    inverse_covariance_matrix = np.linalg.inv(covariance_matrix)
+    # 计算每个因子的相关性得分
+    correlation_scores = np.sum(inverse_covariance_matrix, axis=0)
+    # 将相关性得分归一化为权重
+    weights = correlation_scores / np.sum(correlation_scores)
+    # 创建权重分配的DataFrame，并按权重降序排序
+    factor_weights = pd.DataFrame({'Factor': X_in_sample.columns, 'Weight': weights})
+    factor_weights_sorted = factor_weights.sort_values(by='Weight', ascending=False)
+    factor_weights_3 = np.array(factor_weights_sorted['Weight'])
+
     #样本外预测
     test_date_start = end_date + 1
     test_date_end = end_date + 6
@@ -204,9 +226,14 @@ while end_date <= 293:
 
     max_select = 20  # 最长的数据长度
     # 创建一个空的DataFrame来存储最优投资组合权重
-    portfolio_weights_df = pd.DataFrame()
+    portfolio_weights_df_1 = pd.DataFrame()
+    portfolio_weights_df_2 = pd.DataFrame()
+    portfolio_weights_df_3 = pd.DataFrame()
+
     # 创建一个空的DataFrame
-    portfolio_return_data = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_1 = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_2 = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_3 = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     for i_month_1 in period_test:
         # -- load
         file_name = para.path_data + str(i_month_1) + '.csv'
@@ -223,13 +250,23 @@ while end_date <= 293:
             {'month': data_for_score['month'], 'code': data_for_score['code'], 'curr_return': data_for_score['return']})
         y_curr_month.set_index('code', inplace=True)
         # 计算每只股票的打分
-        scores = X_for_score.dot(factor_weights_2)
+        scores_1 = X_for_score.dot(factor_weights_1)
+        scores_2 = X_for_score.dot(factor_weights_2)
+        scores_3 = X_for_score.dot(factor_weights_3)
         n = 30
-        selected_stocks = scores.nlargest(n)
+        selected_stocks_1 = scores_1.nlargest(n)
+        selected_stocks_2 = scores_2.nlargest(n)
+        selected_stocks_3 = scores_3.nlargest(n)
         # 添加month和stock列
-        selected_stocks = pd.DataFrame(
-            {'code': data_for_score.loc[selected_stocks.index, 'code'], 'score': selected_stocks.values})
-        selected_stocks.set_index('code', inplace=True)
+        selected_stocks_1 = pd.DataFrame(
+            {'code': data_for_score.loc[selected_stocks_1.index, 'code'], 'score': selected_stocks_1.values})
+        selected_stocks_1.set_index('code', inplace=True)
+        selected_stocks_2 = pd.DataFrame(
+            {'code': data_for_score.loc[selected_stocks_2.index, 'code'], 'score': selected_stocks_2.values})
+        selected_stocks_2.set_index('code', inplace=True)
+        selected_stocks_3 = pd.DataFrame(
+            {'code': data_for_score.loc[selected_stocks_3.index, 'code'], 'score': selected_stocks_3.values})
+        selected_stocks_3.set_index('code', inplace=True)
 
         # 整合历史与预测数据
         period_select = range(test_date_start - 6, i_month_1)
@@ -254,45 +291,113 @@ while end_date <= 293:
         combined_return_data[i_month_1] = combined_y_pred_return[i_month_1]
 
         # 筛选出打分法得到的股票
-        top_20_stocks_idx = selected_stocks.index[:20]
-        top_20_stocks_return = combined_return_data.loc[combined_return_data.index.intersection(top_20_stocks_idx)]
-        top_20_stocks_return = top_20_stocks_return.dropna()
+        top_20_stocks_idx_1 = selected_stocks_1.index[:20]
+        top_20_stocks_return_1 = combined_return_data.loc[combined_return_data.index.intersection(top_20_stocks_idx_1)]
+        top_20_stocks_return_1 = top_20_stocks_return_1.dropna()
+        top_20_stocks_idx_2 = selected_stocks_2.index[:20]
+        top_20_stocks_return_2 = combined_return_data.loc[combined_return_data.index.intersection(top_20_stocks_idx_2)]
+        top_20_stocks_return_2 = top_20_stocks_return_2.dropna()
+        top_20_stocks_idx_3 = selected_stocks_3.index[:20]
+        top_20_stocks_return_3 = combined_return_data.loc[combined_return_data.index.intersection(top_20_stocks_idx_3)]
+        top_20_stocks_return_3 = top_20_stocks_return_3.dropna()
 
         # 计算收益率的协方差矩阵
-        cov_matrix = top_20_stocks_return.T.cov()
+        cov_matrix_1 = top_20_stocks_return_1.T.cov()
+        cov_matrix_2 = top_20_stocks_return_2.T.cov()
+        cov_matrix_3 = top_20_stocks_return_3.T.cov()
         # 获取 i_month_1 对应的收益均值和股票代码
-        mean_returns = top_20_stocks_return.loc[:, i_month_1]
-        stock_codes = top_20_stocks_return.index.tolist()
+        mean_returns_1 = top_20_stocks_return_1.loc[:, i_month_1]
+        stock_codes_1 = top_20_stocks_return_1.index.tolist()
+        mean_returns_2 = top_20_stocks_return_2.loc[:, i_month_1]
+        stock_codes_2 = top_20_stocks_return_2.index.tolist()
+        mean_returns_3 = top_20_stocks_return_3.loc[:, i_month_1]
+        stock_codes_3 = top_20_stocks_return_3.index.tolist()
 
         # 使用均值-方差模型计算最优投资组合权重
-        portfolio_weights = calculate_portfolio_weights(mean_returns, cov_matrix)
+        portfolio_weights_1 = calculate_portfolio_weights(mean_returns_1, cov_matrix_1)
+        portfolio_weights_2 = calculate_portfolio_weights(mean_returns_2, cov_matrix_2)
+        portfolio_weights_3 = calculate_portfolio_weights(mean_returns_3, cov_matrix_3)
 
         # 计算组合收益
-        y_curr_month_return = y_curr_month.loc[y_curr_month.index.intersection(stock_codes)]['curr_return']
-        portfolio_return = np.dot(portfolio_weights.T, y_curr_month_return)
-        print(portfolio_return)
+        y_curr_month_return_1 = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_1)]['curr_return']
+        portfolio_return_1 = np.dot(portfolio_weights_1.T, y_curr_month_return_1)
+        y_curr_month_return_2 = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_2)]['curr_return']
+        portfolio_return_2 = np.dot(portfolio_weights_2.T, y_curr_month_return_2)
+        y_curr_month_return_3 = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_3)]['curr_return']
+        portfolio_return_3 = np.dot(portfolio_weights_3.T, y_curr_month_return_3)
 
         # 计算累计值
-        if portfolio_return_data.empty:
-            cumulative_value = 1 + portfolio_return
+        if portfolio_return_data_1.empty:
+            cumulative_value_1 = 1 + portfolio_return_1
         else:
-            previous_cumulative_value = portfolio_return_data['compound_value'].iloc[-1]
-            cumulative_value = previous_cumulative_value * (1 + portfolio_return)
+            previous_cumulative_value = portfolio_return_data_1['compound_value'].iloc[-1]
+            cumulative_value_1 = previous_cumulative_value * (1 + portfolio_return_1)
+        if portfolio_return_data_2.empty:
+            cumulative_value_2 = 1 + portfolio_return_2
+        else:
+            previous_cumulative_value = portfolio_return_data_2['compound_value'].iloc[-1]
+            cumulative_value_2 = previous_cumulative_value * (1 + portfolio_return_2)
+        if portfolio_return_data_3.empty:
+            cumulative_value_3 = 1 + portfolio_return_3
+        else:
+            previous_cumulative_value = portfolio_return_data_3['compound_value'].iloc[-1]
+            cumulative_value_3 = previous_cumulative_value * (1 + portfolio_return_3)
+
 
         # 将收益数据添加到DataFrame中
-        row = {'month': i_month_1, 'return': portfolio_return, 'compound_value': cumulative_value}
-        portfolio_return_data = pd.concat([portfolio_return_data, pd.DataFrame(row, index=[0])], ignore_index=True)
-        return_data_combined = pd.concat([return_data_combined, portfolio_return_data], ignore_index=True)
+        row_1 = {'month': i_month_1, 'return': portfolio_return_1, 'compound_value': cumulative_value_1}
+        portfolio_return_data_1 = pd.concat([portfolio_return_data_1, pd.DataFrame(row_1, index=[0])], ignore_index=True)
+        row_2 = {'month': i_month_1, 'return': portfolio_return_2, 'compound_value': cumulative_value_2}
+        portfolio_return_data_2 = pd.concat([portfolio_return_data_2, pd.DataFrame(row_2, index=[0])], ignore_index=True)
+        row_3 = {'month': i_month_1, 'return': portfolio_return_3, 'compound_value': cumulative_value_3}
+        portfolio_return_data_3 = pd.concat([portfolio_return_data_3, pd.DataFrame(row_3, index=[0])], ignore_index=True)
 
         # 使用NaN将数据补齐至长度为20
-        portfolio_weights = np.concatenate((portfolio_weights, np.full(max_select - len(portfolio_weights), np.nan)))
-        stock_codes = np.concatenate((stock_codes, np.full(max_select - len(stock_codes), np.nan)))
+        portfolio_weights_1 = np.concatenate((portfolio_weights_1, np.full(max_select - len(portfolio_weights_1), np.nan)))
+        stock_codes_1 = np.concatenate((stock_codes_1, np.full(max_select - len(stock_codes_1), np.nan)))
+        portfolio_weights_2 = np.concatenate((portfolio_weights_2, np.full(max_select - len(portfolio_weights_2), np.nan)))
+        stock_codes_2 = np.concatenate((stock_codes_2, np.full(max_select - len(stock_codes_2), np.nan)))
+        portfolio_weights_3 = np.concatenate((portfolio_weights_3, np.full(max_select - len(portfolio_weights_3), np.nan)))
+        stock_codes_3 = np.concatenate((stock_codes_3, np.full(max_select - len(stock_codes_3), np.nan)))
 
         # 将最优投资组合权重和股票代码添加到DataFrame中
-        portfolio_weights_df[str(i_month_1) + '_code'] = stock_codes
-        portfolio_weights_df[str(i_month_1)] = portfolio_weights
-    return_data_combined = pd.concat([return_data_combined, portfolio_return_data], ignore_index=True)
-    weights_data_combined = pd.concat([weights_data_combined, portfolio_weights_df], ignore_index=True)
+        portfolio_weights_df_1[str(i_month_1) + '_code'] = stock_codes_1
+        portfolio_weights_df_1[str(i_month_1)] = portfolio_weights_1
+        portfolio_weights_df_2[str(i_month_1) + '_code'] = stock_codes_2
+        portfolio_weights_df_2[str(i_month_1)] = portfolio_weights_2
+        portfolio_weights_df_3[str(i_month_1) + '_code'] = stock_codes_3
+        portfolio_weights_df_3[str(i_month_1)] = portfolio_weights_3
+    return_data_combined_1 = pd.concat([return_data_combined_1, portfolio_return_data_1], ignore_index=True)
+    weights_data_combined_1 = pd.concat([weights_data_combined_1, portfolio_weights_df_1], ignore_index=True)
+    return_data_combined_2 = pd.concat([return_data_combined_2, portfolio_return_data_2], ignore_index=True)
+    weights_data_combined_2 = pd.concat([weights_data_combined_2, portfolio_weights_df_2], ignore_index=True)
+    return_data_combined_3 = pd.concat([return_data_combined_3, portfolio_return_data_3], ignore_index=True)
+    weights_data_combined_3 = pd.concat([weights_data_combined_3, portfolio_weights_df_3], ignore_index=True)
+
+    # -- evaluation
+    ann_excess_return_1 = np.mean(return_data_combined_1[return_data_combined_1['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_1 = np.std(return_data_combined_1[return_data_combined_1['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_1 = ann_excess_return_1 / ann_excess_vol_1
+
+    ann_excess_return_2 = np.mean(return_data_combined_2[return_data_combined_2['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_2 = np.std(return_data_combined_2[return_data_combined_2['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_2 = ann_excess_return_2 / ann_excess_vol_2
+
+    ann_excess_return_3 = np.mean(return_data_combined_3[return_data_combined_3['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_3 = np.std(return_data_combined_3[return_data_combined_3['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_3 = ann_excess_return_3 / ann_excess_vol_3
+    print('回归系数')
+    print('annual excess return = %.2f' % ann_excess_return_1)
+    print('annual excess volatility = %.2f' % ann_excess_vol_1)
+    print('information ratio = %.2f' % info_ratio_1)
+    print('信息系数')
+    print('annual excess return = %.2f' % ann_excess_return_2)
+    print('annual excess volatility = %.2f' % ann_excess_vol_2)
+    print('information ratio = %.2f' % info_ratio_2)
+    print('协方差矩阵')
+    print('annual excess return = %.2f' % ann_excess_return_3)
+    print('annual excess volatility = %.2f' % ann_excess_vol_3)
+    print('information ratio = %.2f' % info_ratio_3)
 
     ##数据集滚动
     end_date += train_update_months
@@ -300,16 +405,54 @@ while end_date <= 293:
         start_date = end_date - train_data_max_months
     else:
         start_date = start_date
-    if end_date + 6 >= 293:
+    if end_date + 6 >= 284:
         break
 
 import matplotlib.pyplot as plt
-# 绘制曲线图
-plt.plot(portfolio_return_data['month'], return_data_combined['return'], label='return')
-plt.plot(portfolio_return_data['month'], return_data_combined['compound_value'], label='compound_value')
+# 绘制曲线图1
+plt.plot(return_data_combined_1['month'], return_data_combined_1['return'], label='return_1')
+plt.plot(return_data_combined_1['month'], return_data_combined_1['compound_value'], label='compound_value_1')
 # 添加图例和标签
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Value')
+plt.title('Return Data Combined 1')
 # 显示图像
 plt.show()
+# 创建新的图像窗口
+plt.figure()
+# 绘制曲线图2
+plt.plot(return_data_combined_2['month'], return_data_combined_2['return'], label='return_2')
+plt.plot(return_data_combined_2['month'], return_data_combined_2['compound_value'], label='compound_value_2')
+# 添加图例和标签
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Value')
+plt.title('Return Data Combined 2')
+# 显示图像
+plt.show()
+# 创建新的图像窗口
+plt.figure()
+# 绘制曲线图3
+plt.plot(return_data_combined_3['month'], return_data_combined_3['return'], label='return_3')
+plt.plot(return_data_combined_3['month'], return_data_combined_3['compound_value'], label='compound_value_3')
+# 添加图例和标签
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Value')
+plt.title('Return Data Combined 3')
+# 显示图像
+plt.show()
+
+print('回归系数下因子权重收益',return_data_combined_1['return'].mean)
+print('回归系数下因子权重累计价值',return_data_combined_1['compound_value'].mean)
+print('信息系数下因子权重收益',return_data_combined_2['return'].mean)
+print('信息系数下因子权重累计价值',return_data_combined_2['compound_value'].mean)
+print('协方差矩阵下因子权重收益',return_data_combined_3['return'].mean)
+print('协方差矩阵下因子权重累计价值',return_data_combined_3['compound_value'].mean)
+
+
+
+
+
+
