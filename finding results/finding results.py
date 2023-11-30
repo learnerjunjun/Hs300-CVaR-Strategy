@@ -329,7 +329,7 @@ while end_date <= 284:
         selected_stocks_corr.set_index('code', inplace=True)
 
         # 整合历史与预测数据
-        period_select = range(test_date_start - 6, i_month_1)
+        period_select = range(test_date_start - 30, i_month_1)
         combined_y_curr_return_past = pd.DataFrame()
         for i_month_2 in period_select:
             # -- load
