@@ -58,6 +58,7 @@ for stock in selected_stocks:
     alpha=1 #置信水平下的分位数
     returns_np=np.array(returns)
     quantile=np.percentile(returns_np,alpha)
+    print(quantile)
     # 将拟合结果存储到DataFrame中
     fit_results.loc[len(fit_results)] = [stock, best_fit_name, best_fit_params,alpha,quantile]
     #绘图
