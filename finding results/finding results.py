@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import datetime
 import warnings
-
 warnings.filterwarnings('ignore')
 
 # hs300名单 2022.1.1之前
@@ -43,8 +42,12 @@ return_data_combined_ic = pd.DataFrame()
 weights_data_combined_ic = pd.DataFrame()
 return_data_combined_corr = pd.DataFrame()
 weights_data_combined_corr = pd.DataFrame()
-return_data_combined_cvar = pd.DataFrame()
-weights_data_combined_cvar = pd.DataFrame()
+return_data_combined_cvar_coef = pd.DataFrame()
+weights_data_combined_cvar_coef = pd.DataFrame()
+return_data_combined_cvar_ic = pd.DataFrame()
+weights_data_combined_cvar_ic = pd.DataFrame()
+return_data_combined_cvar_corr = pd.DataFrame()
+weights_data_combined_cvar_corr = pd.DataFrame()
 
 while end_date <= 284:
     period_train = range(start_date, end_date + 1)
@@ -281,13 +284,16 @@ while end_date <= 284:
     portfolio_weights_df_coef = pd.DataFrame()
     portfolio_weights_df_ic = pd.DataFrame()
     portfolio_weights_df_corr = pd.DataFrame()
-    portfolio_weights_df_cvar = pd.DataFrame()
-
+    portfolio_weights_df_cvar_coef = pd.DataFrame()
+    portfolio_weights_df_cvar_ic = pd.DataFrame()
+    portfolio_weights_df_cvar_corr = pd.DataFrame()
     # 创建一个空的DataFrame
     portfolio_return_data_coef = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     portfolio_return_data_ic = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     portfolio_return_data_corr = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_cvar = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_cvar_coef = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_cvar_ic = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_cvar_corr = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     for i_month_1 in period_test:
         # -- load
         file_name = para.path_data + str(i_month_1) + '.csv'
@@ -374,10 +380,15 @@ while end_date <= 284:
         portfolio_weights_coef = calculate_portfolio_weights(mean_returns_coef, cov_matrix_coef)
         portfolio_weights_ic = calculate_portfolio_weights(mean_returns_ic, cov_matrix_ic)
         portfolio_weights_corr = calculate_portfolio_weights(mean_returns_corr, cov_matrix_corr)
+        
         # 使用CVaR计算最优方差
-        returns_cvar = top_20_stocks_return_corr
         confidence_level = 0.99
-        cvar, portfolio_weights_cvar = minimize_cvar(returns_cvar, confidence_level)
+        returns_cvar_coef = top_20_stocks_return_coef
+        returns_cvar_ic = top_20_stocks_return_ic
+        returns_cvar_corr = top_20_stocks_return_corr
+        cvar_coef, portfolio_weights_cvar_coef = minimize_cvar(returns_cvar_coef, confidence_level)
+        cvar_ic, portfolio_weights_cvar_ic = minimize_cvar(returns_cvar_ic, confidence_level)
+        cvar_corr, portfolio_weights_cvar_corr = minimize_cvar(returns_cvar_corr, confidence_level)
 
         # 计算组合收益
         y_curr_month_return_coef = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_coef)]['curr_return']
@@ -386,7 +397,9 @@ while end_date <= 284:
         portfolio_return_ic = np.dot(portfolio_weights_ic.T, y_curr_month_return_ic)
         y_curr_month_return_corr = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_corr)]['curr_return']
         portfolio_return_corr = np.dot(portfolio_weights_corr.T, y_curr_month_return_corr)
-        portfolio_return_cvar = np.dot(portfolio_weights_cvar.T, y_curr_month_return_corr)
+        portfolio_return_cvar_coef = np.dot(portfolio_weights_cvar_coef.T, y_curr_month_return_coef)
+        portfolio_return_cvar_ic = np.dot(portfolio_weights_cvar_ic.T, y_curr_month_return_ic)
+        portfolio_return_cvar_corr = np.dot(portfolio_weights_cvar_corr.T, y_curr_month_return_corr)
 
         # 计算累计值
         if portfolio_return_data_coef.empty:
@@ -404,11 +417,21 @@ while end_date <= 284:
         else:
             previous_cumulative_value = portfolio_return_data_corr['compound_value'].iloc[-1]
             cumulative_value_corr = previous_cumulative_value * (1 + portfolio_return_corr)
-        if portfolio_return_data_cvar.empty:
-            cumulative_value_cvar = 1 + portfolio_return_cvar
+        if portfolio_return_data_cvar_coef.empty:
+            cumulative_value_cvar_coef = 1 + portfolio_return_cvar_coef
         else:
-            previous_cumulative_value = portfolio_return_data_cvar['compound_value'].iloc[-1]
-            cumulative_value_cvar = previous_cumulative_value * (1 + portfolio_return_cvar)
+            previous_cumulative_value = portfolio_return_data_cvar_coef['compound_value'].iloc[-1]
+            cumulative_value_cvar_coef = previous_cumulative_value * (1 + portfolio_return_cvar_coef)
+        if portfolio_return_data_cvar_ic.empty:
+            cumulative_value_cvar_ic = 1 + portfolio_return_cvar_ic
+        else:
+            previous_cumulative_value = portfolio_return_data_cvar_ic['compound_value'].iloc[-1]
+            cumulative_value_cvar_ic = previous_cumulative_value * (1 + portfolio_return_cvar_ic)
+        if portfolio_return_data_cvar_corr.empty:
+            cumulative_value_cvar_corr = 1 + portfolio_return_cvar_corr
+        else:
+            previous_cumulative_value = portfolio_return_data_cvar_corr['compound_value'].iloc[-1]
+            cumulative_value_cvar_corr = previous_cumulative_value * (1 + portfolio_return_cvar_corr)
 
         # 将收益数据添加到DataFrame中
         row_coef = {'month': i_month_1, 'return': portfolio_return_coef, 'compound_value': cumulative_value_coef}
@@ -420,8 +443,14 @@ while end_date <= 284:
         row_corr = {'month': i_month_1, 'return': portfolio_return_corr, 'compound_value': cumulative_value_corr}
         portfolio_return_data_corr = pd.concat([portfolio_return_data_corr, pd.DataFrame(row_corr, index=[0])],
                                                ignore_index=True)
-        row_cvar = {'month': i_month_1, 'return': portfolio_return_cvar, 'compound_value': cumulative_value_cvar}
-        portfolio_return_data_cvar = pd.concat([portfolio_return_data_cvar, pd.DataFrame(row_cvar, index=[0])],
+        row_cvar_coef = {'month': i_month_1, 'return': portfolio_return_cvar_coef, 'compound_value': cumulative_value_cvar_coef}
+        portfolio_return_data_cvar_coef = pd.concat([portfolio_return_data_cvar_coef, pd.DataFrame(row_cvar_coef, index=[0])],
+                                               ignore_index=True)
+        row_cvar_ic = {'month': i_month_1, 'return': portfolio_return_cvar_ic, 'compound_value': cumulative_value_cvar_ic}
+        portfolio_return_data_cvar_ic = pd.concat([portfolio_return_data_cvar_ic, pd.DataFrame(row_cvar_ic, index=[0])],
+                                               ignore_index=True)
+        row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr, 'compound_value': cumulative_value_cvar_corr}
+        portfolio_return_data_cvar_corr = pd.concat([portfolio_return_data_cvar_corr, pd.DataFrame(row_cvar_corr, index=[0])],
                                                ignore_index=True)
 
         # 使用NaN将数据补齐至长度为20
@@ -434,9 +463,16 @@ while end_date <= 284:
         portfolio_weights_corr = np.concatenate(
             (portfolio_weights_corr, np.full(max_select - len(portfolio_weights_corr), np.nan)))
         stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
-        portfolio_weights_cvar = np.concatenate(
-            (portfolio_weights_cvar, np.full(max_select - len(portfolio_weights_cvar), np.nan)))
+        portfolio_weights_cvar_coef = np.concatenate(
+            (portfolio_weights_cvar_coef, np.full(max_select - len(portfolio_weights_cvar_coef), np.nan)))
+        stock_codes_corr = np.concatenate((stock_codes_coef, np.full(max_select - len(stock_codes_coef), np.nan)))
+        portfolio_weights_cvar_ic = np.concatenate(
+            (portfolio_weights_cvar_ic, np.full(max_select - len(portfolio_weights_cvar_ic), np.nan)))
+        stock_codes_corr = np.concatenate((stock_codes_ic, np.full(max_select - len(stock_codes_ic), np.nan)))
+        portfolio_weights_cvar_corr = np.concatenate(
+            (portfolio_weights_cvar_corr, np.full(max_select - len(portfolio_weights_cvar_corr), np.nan)))
         stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
+  
 
         # 将最优投资组合权重和股票代码添加到DataFrame中
         portfolio_weights_df_coef[str(i_month_1) + '_code'] = stock_codes_coef
@@ -445,8 +481,12 @@ while end_date <= 284:
         portfolio_weights_df_ic[str(i_month_1)] = portfolio_weights_ic
         portfolio_weights_df_corr[str(i_month_1) + '_code'] = stock_codes_corr
         portfolio_weights_df_corr[str(i_month_1)] = portfolio_weights_corr
-        portfolio_weights_df_cvar[str(i_month_1) + '_code'] = stock_codes_corr
-        portfolio_weights_df_cvar[str(i_month_1)] = portfolio_weights_cvar
+        portfolio_weights_df_cvar_coef[str(i_month_1) + '_code'] = stock_codes_coef
+        portfolio_weights_df_cvar_coef[str(i_month_1)] = portfolio_weights_cvar_coef
+        portfolio_weights_df_cvar_ic[str(i_month_1) + '_code'] = stock_codes_ic
+        portfolio_weights_df_cvar_ic[str(i_month_1)] = portfolio_weights_cvar_ic
+        portfolio_weights_df_cvar_corr[str(i_month_1) + '_code'] = stock_codes_corr
+        portfolio_weights_df_cvar_corr[str(i_month_1)] = portfolio_weights_cvar_corr
 
     return_data_combined_coef = pd.concat([return_data_combined_coef, portfolio_return_data_coef], ignore_index=True)
     weights_data_combined_coef = pd.concat([weights_data_combined_coef, portfolio_weights_df_coef], ignore_index=True)
@@ -454,8 +494,12 @@ while end_date <= 284:
     weights_data_combined_ic = pd.concat([weights_data_combined_ic, portfolio_weights_df_ic], ignore_index=True)
     return_data_combined_corr = pd.concat([return_data_combined_corr, portfolio_return_data_corr], ignore_index=True)
     weights_data_combined_corr = pd.concat([weights_data_combined_corr, portfolio_weights_df_corr], ignore_index=True)
-    return_data_combined_cvar = pd.concat([return_data_combined_cvar, portfolio_return_data_cvar], ignore_index=True)
-    weights_data_combined_cvar = pd.concat([weights_data_combined_cvar, portfolio_weights_df_cvar], ignore_index=True)
+    return_data_combined_cvar_coef = pd.concat([return_data_combined_cvar_coef, portfolio_return_data_cvar_coef], ignore_index=True)
+    weights_data_combined_cvar_coef = pd.concat([weights_data_combined_cvar_coef, portfolio_weights_df_cvar_coef], ignore_index=True)
+    return_data_combined_cvar_ic = pd.concat([return_data_combined_cvar_ic, portfolio_return_data_cvar_ic], ignore_index=True)
+    weights_data_combined_cvar_ic = pd.concat([weights_data_combined_cvar_ic, portfolio_weights_df_cvar_ic], ignore_index=True)
+    return_data_combined_cvar_corr = pd.concat([return_data_combined_cvar_corr, portfolio_return_data_cvar_corr], ignore_index=True)
+    weights_data_combined_cvar_corr = pd.concat([weights_data_combined_cvar_corr, portfolio_weights_df_cvar_corr], ignore_index=True)
 
     # -- evaluation
     ann_excess_return_coef = np.mean(
@@ -476,28 +520,46 @@ while end_date <= 284:
         return_data_combined_corr[return_data_combined_corr['month'].isin(period_test)]['return']) * np.sqrt(12)
     info_ratio_corr = ann_excess_return_corr / ann_excess_vol_corr
 
-    ann_excess_return_cvar = np.mean(
-        return_data_combined_cvar[return_data_combined_cvar['month'].isin(period_test)]['return']) * 12
-    ann_excess_vol_cvar = np.std(
-        return_data_combined_cvar[return_data_combined_cvar['month'].isin(period_test)]['return']) * np.sqrt(12)
-    info_ratio_cvar = ann_excess_return_cvar / ann_excess_vol_cvar
+    ann_excess_return_cvar_coef = np.mean(
+        return_data_combined_cvar_coef[return_data_combined_cvar_coef['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_cvar_coef = np.std(
+        return_data_combined_cvar_coef[return_data_combined_cvar_coef['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_cvar_coef = ann_excess_return_cvar_coef / ann_excess_vol_cvar_coef
+    ann_excess_return_cvar_ic = np.mean(
+        return_data_combined_cvar_ic[return_data_combined_cvar_ic['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_cvar_ic = np.std(
+        return_data_combined_cvar_ic[return_data_combined_cvar_ic['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_cvar_ic = ann_excess_return_cvar_ic / ann_excess_vol_cvar_ic
+    ann_excess_return_cvar_corr = np.mean(
+        return_data_combined_cvar_corr[return_data_combined_cvar_corr['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_cvar_corr = np.std(
+        return_data_combined_cvar_corr[return_data_combined_cvar_corr['month'].isin(period_test)]['return']) * np.sqrt(12)
+    info_ratio_cvar_corr = ann_excess_return_cvar_corr / ann_excess_vol_cvar_corr
 
     print('回归系数')
     print('annual excess return = %.2f' % ann_excess_return_coef)
     print('annual excess volatility = %.2f' % ann_excess_vol_coef)
     print('information ratio = %.2f' % info_ratio_coef)
+    print('CVaR_coef')
+    print('annual excess return = %.2f' % ann_excess_return_cvar_coef)
+    print('annual excess volatility = %.2f' % ann_excess_vol_cvar_coef)
+    print('information ratio = %.2f' % info_ratio_cvar_coef)
     print('信息系数')
     print('annual excess return = %.2f' % ann_excess_return_ic)
     print('annual excess volatility = %.2f' % ann_excess_vol_ic)
     print('information ratio = %.2f' % info_ratio_ic)
+    print('CVaR_ic')
+    print('annual excess return = %.2f' % ann_excess_return_cvar_ic)
+    print('annual excess volatility = %.2f' % ann_excess_vol_cvar_ic)
+    print('information ratio = %.2f' % info_ratio_cvar_ic)
     print('协方差矩阵')
     print('annual excess return = %.2f' % ann_excess_return_corr)
     print('annual excess volatility = %.2f' % ann_excess_vol_corr)
     print('information ratio = %.2f' % info_ratio_corr)
-    print('CVaR')
-    print('annual excess return = %.2f' % ann_excess_return_cvar)
-    print('annual excess volatility = %.2f' % ann_excess_vol_cvar)
-    print('information ratio = %.2f' % info_ratio_cvar)
+    print('CVaR_corr')
+    print('annual excess return = %.2f' % ann_excess_return_cvar_corr)
+    print('annual excess volatility = %.2f' % ann_excess_vol_cvar_corr)
+    print('information ratio = %.2f' % info_ratio_cvar_corr)
 
     ##数据集滚动
     end_date += train_update_months
@@ -520,9 +582,23 @@ plt.ylabel('Value')
 plt.title('Return Data Combined 1')
 # 显示图像
 plt.show()
+
 # 创建新的图像窗口
 plt.figure()
 # 绘制曲线图2
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef')
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef')
+# 添加图例和标签
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Value')
+plt.title('Return Data VaR_Coef')
+# 显示图像
+plt.show()
+
+# 创建新的图像窗口
+plt.figure()
+# 绘制曲线图3
 plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_2')
 plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_2')
 # 添加图例和标签
@@ -535,7 +611,20 @@ plt.show()
 
 # 创建新的图像窗口
 plt.figure()
-# 绘制曲线图3
+# 绘制曲线图4
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic')
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic')
+# 添加图例和标签
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Value')
+plt.title('Return Data VaR_ic')
+# 显示图像
+plt.show()
+
+# 创建新的图像窗口
+plt.figure()
+# 绘制曲线图5
 plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_3')
 plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_3')
 # 添加图例和标签
@@ -548,22 +637,26 @@ plt.show()
 
 # 创建新的图像窗口
 plt.figure()
-# 绘制曲线图3
-plt.plot(return_data_combined_cvar['month'], return_data_combined_cvar['return'], label='return_4')
-plt.plot(return_data_combined_cvar['month'], return_data_combined_cvar['compound_value'], label='compound_value_4')
+# 绘制曲线图6
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr')
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr')
 # 添加图例和标签
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Value')
-plt.title('Return Data Combined 4')
+plt.title('Return Data VaR_corr')
 # 显示图像
 plt.show()
 
-print('回归系数下因子权重收益', return_data_combined_coef['return'].mean)
-print('回归系数下因子权重累计价值', return_data_combined_coef['compound_value'].mean)
-print('信息系数下因子权重收益', return_data_combined_ic['return'].mean)
-print('信息系数下因子权重累计价值', return_data_combined_ic['compound_value'].mean)
-print('协方差矩阵下因子权重收益', return_data_combined_corr['return'].mean)
-print('协方差矩阵下因子权重累计价值', return_data_combined_corr['compound_value'].mean)
-print('CVaR下因子权重收益', return_data_combined_cvar['return'].mean)
-print('CVaR下因子权重累计价值', return_data_combined_cvar['compound_value'].mean)
+print('回归系数下因子权重收益:', return_data_combined_coef['return'].mean())
+print('回归系数下因子权重累计价值:', return_data_combined_coef['compound_value'].mean())
+print('CVaR_coef下因子权重收益:', return_data_combined_cvar_coef['return'].mean())
+print('CVaR_coef下因子权重累计价值:', return_data_combined_cvar_coef['compound_value'].mean())
+print('信息系数下因子权重收益:', return_data_combined_ic['return'].mean())
+print('信息系数下因子权重累计价值:', return_data_combined_ic['compound_value'].mean())
+print('CVaR_ic下因子权重收益:', return_data_combined_cvar_ic['return'].mean())
+print('CVaR_ic下因子权重累计价值:', return_data_combined_cvar_ic['compound_value'].mean())
+print('协方差矩阵下因子权重收益:', return_data_combined_corr['return'].mean())
+print('协方差矩阵下因子权重累计价值:', return_data_combined_corr['compound_value'].mean())
+print('CVaR_corr下因子权重收益:', return_data_combined_cvar_corr['return'].mean())
+print('CVaR_corr下因子权重累计价值:', return_data_combined_cvar_corr['compound_value'].mean())
