@@ -10,7 +10,13 @@ hs300 = pd.read_csv(r'../hs300_2005-2022/hs300_monthly.csv', dtype=object)
 hs300 = hs300.drop('Unnamed: 0', axis=1)
 hs300 = hs300.rename(columns={'stock': 'code'})
 hs300['month'] = hs300['month'].astype(int)
-
+#hs300收益率
+Dataused_return=pd.read_excel(r'../data/国内指数月行情文件/IDX_Idxtrdmth.xlsx',dtype = object)
+month_name_number = pd.DataFrame({'Month': hs300['month_details'].unique(), 'month':hs300['month'].unique()})
+hs300_return_monthly = Dataused_return.loc[Dataused_return['Indexcd'] == '000300']
+hs300_return = pd.merge(hs300_return_monthly, month_name_number, on='Month', how='right')
+hs300_return = hs300_return.dropna()
+hs300_return['month'] = hs300_return['month'].astype(int)
 
 ## 定义参数类
 # -- define a class including all parameters
@@ -48,6 +54,7 @@ return_data_combined_cvar_ic = pd.DataFrame()
 weights_data_combined_cvar_ic = pd.DataFrame()
 return_data_combined_cvar_corr = pd.DataFrame()
 weights_data_combined_cvar_corr = pd.DataFrame()
+return_data_combined_hs300 = pd.DataFrame()
 
 while end_date <= 284:
     period_train = range(start_date, end_date + 1)
@@ -220,7 +227,6 @@ while end_date <= 284:
     # 优化器-1
     from scipy.optimize import minimize
     import cvxpy as cp
-
     def calculate_portfolio_weights(mean_returns, cov_matrix):
         num_assets = len(mean_returns)
         weights = cp.Variable(num_assets)
@@ -235,17 +241,14 @@ while end_date <= 284:
         result = weights.value
         return np.array(result)
 
-
     # 优化器-2
     def calculate_portfolio_returns(returns, weights):
         portfolio_returns = np.dot(weights.T, returns)
         return portfolio_returns
 
-
     def calculate_var(portfolio_returns, confidence_level=0.99):
         var = np.percentile(portfolio_returns, 100 * (1 - confidence_level))
         return var
-
 
     def calculate_cvar(portfolio_returns, confidence_level=0.99):
         var = calculate_var(portfolio_returns, confidence_level)
@@ -254,16 +257,13 @@ while end_date <= 284:
             np.maximum(loss_function - var, 0))
         return cvar
 
-
     def objective_function(weights, returns, confidence_level):
         portfolio_returns = calculate_portfolio_returns(returns, weights)
         cvar = calculate_cvar(portfolio_returns, confidence_level)
         return cvar
 
-
     def constraint_function(weights):
         return np.sum(weights) - 1
-
 
     def minimize_cvar(returns, confidence_level=0.99):
         n_stocks = returns.shape[0]
@@ -277,7 +277,6 @@ while end_date <= 284:
         min_cvar = result.fun
         optimal_weights = result.x
         return min_cvar, optimal_weights
-
 
     max_select = 20  # 最长的数据长度
     # 创建一个空的DataFrame来存储最优投资组合权重
@@ -294,6 +293,7 @@ while end_date <= 284:
     portfolio_return_data_cvar_coef = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     portfolio_return_data_cvar_ic = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     portfolio_return_data_cvar_corr = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    return_data_hs300 = pd.DataFrame(columns=['month', 'return', 'compound_value'])
     for i_month_1 in period_test:
         # -- load
         file_name = para.path_data + str(i_month_1) + '.csv'
@@ -329,7 +329,7 @@ while end_date <= 284:
         selected_stocks_corr.set_index('code', inplace=True)
 
         # 整合历史与预测数据
-        period_select = range(test_date_start - 30, i_month_1)
+        period_select = range(test_date_start - 25, i_month_1)
         combined_y_curr_return_past = pd.DataFrame()
         for i_month_2 in period_select:
             # -- load
@@ -400,6 +400,7 @@ while end_date <= 284:
         portfolio_return_cvar_coef = np.dot(portfolio_weights_cvar_coef.T, y_curr_month_return_coef)
         portfolio_return_cvar_ic = np.dot(portfolio_weights_cvar_ic.T, y_curr_month_return_ic)
         portfolio_return_cvar_corr = np.dot(portfolio_weights_cvar_corr.T, y_curr_month_return_corr)
+        hs300_idxrtn = hs300_return.loc[hs300_return['month'] == i_month_1, 'Idxrtn'].item()
 
         # 计算累计值
         if portfolio_return_data_coef.empty:
@@ -432,6 +433,11 @@ while end_date <= 284:
         else:
             previous_cumulative_value = portfolio_return_data_cvar_corr['compound_value'].iloc[-1]
             cumulative_value_cvar_corr = previous_cumulative_value * (1 + portfolio_return_cvar_corr)
+        if return_data_hs300.empty:
+            cumulative_value_hs300 = 1 + hs300_idxrtn
+        else:
+            previous_cumulative_value = return_data_hs300['compound_value'].iloc[-1]
+            cumulative_value_hs300= previous_cumulative_value * (1 + hs300_idxrtn)
 
         # 将收益数据添加到DataFrame中
         row_coef = {'month': i_month_1, 'return': portfolio_return_coef, 'compound_value': cumulative_value_coef}
@@ -451,6 +457,9 @@ while end_date <= 284:
                                                ignore_index=True)
         row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr, 'compound_value': cumulative_value_cvar_corr}
         portfolio_return_data_cvar_corr = pd.concat([portfolio_return_data_cvar_corr, pd.DataFrame(row_cvar_corr, index=[0])],
+                                               ignore_index=True)
+        row_hs300 = {'month': i_month_1, 'return': hs300_idxrtn, 'compound_value': cumulative_value_hs300}
+        return_data_hs300 = pd.concat([return_data_hs300, pd.DataFrame(row_hs300, index=[0])],
                                                ignore_index=True)
 
         # 使用NaN将数据补齐至长度为20
@@ -500,6 +509,7 @@ while end_date <= 284:
     weights_data_combined_cvar_ic = pd.concat([weights_data_combined_cvar_ic, portfolio_weights_df_cvar_ic], ignore_index=True)
     return_data_combined_cvar_corr = pd.concat([return_data_combined_cvar_corr, portfolio_return_data_cvar_corr], ignore_index=True)
     weights_data_combined_cvar_corr = pd.concat([weights_data_combined_cvar_corr, portfolio_weights_df_cvar_corr], ignore_index=True)
+    return_data_combined_hs300 = pd.concat([return_data_combined_hs300 , return_data_hs300],ignore_index=True)
 
     # -- evaluation
     ann_excess_return_coef = np.mean(
@@ -536,6 +546,13 @@ while end_date <= 284:
         return_data_combined_cvar_corr[return_data_combined_cvar_corr['month'].isin(period_test)]['return']) * np.sqrt(12)
     info_ratio_cvar_corr = ann_excess_return_cvar_corr / ann_excess_vol_cvar_corr
 
+    ann_excess_return_hs300 = np.mean(
+        return_data_combined_hs300[return_data_combined_hs300['month'].isin(period_test)]['return']) * 12
+    ann_excess_vol_hs300= np.std(
+        return_data_combined_hs300[return_data_combined_hs300['month'].isin(period_test)]['return']) * np.sqrt(
+        12)
+    info_ratio_hs300 = ann_excess_return_hs300 / ann_excess_vol_hs300
+
     print('回归系数')
     print('annual excess return = %.2f' % ann_excess_return_coef)
     print('annual excess volatility = %.2f' % ann_excess_vol_coef)
@@ -560,6 +577,10 @@ while end_date <= 284:
     print('annual excess return = %.2f' % ann_excess_return_cvar_corr)
     print('annual excess volatility = %.2f' % ann_excess_vol_cvar_corr)
     print('information ratio = %.2f' % info_ratio_cvar_corr)
+    print('hs300')
+    print('annual excess return = %.2f' % ann_excess_return_hs300)
+    print('annual excess volatility = %.2f' % ann_excess_vol_hs300)
+    print('information ratio = %.2f' % info_ratio_hs300)
 
     ##数据集滚动
     end_date += train_update_months
@@ -648,6 +669,19 @@ plt.title('Return Data VaR_corr')
 # 显示图像
 plt.show()
 
+# 创建新的图像窗口
+plt.figure()
+# 绘制曲线图6
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300')
+# 添加图例和标签
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Value')
+plt.title('Return Data hs300')
+# 显示图像
+plt.show()
+
 print('回归系数下因子权重收益:', return_data_combined_coef['return'].mean())
 print('回归系数下因子权重累计价值:', return_data_combined_coef['compound_value'].mean())
 print('CVaR_coef下因子权重收益:', return_data_combined_cvar_coef['return'].mean())
@@ -660,3 +694,5 @@ print('协方差矩阵下因子权重收益:', return_data_combined_corr['return
 print('协方差矩阵下因子权重累计价值:', return_data_combined_corr['compound_value'].mean())
 print('CVaR_corr下因子权重收益:', return_data_combined_cvar_corr['return'].mean())
 print('CVaR_corr下因子权重累计价值:', return_data_combined_cvar_corr['compound_value'].mean())
+print('hs300收益:', return_data_combined_hs300['return'].mean())
+print('hs300累计价值:', return_data_combined_hs300['compound_value'].mean())
