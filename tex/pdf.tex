@@ -55,7 +55,7 @@
 			\begin{figure}
 				\centering
 				\includegraphics[width=0.9\linewidth]{"pic/distribution of random six"}
-				\caption{}
+				\caption{Distribution}
 				\label{fig:distribution-of-random-stock}
 			\end{figure}
 			\end{itemize}
@@ -162,30 +162,43 @@
 \section{数据实验}
 \begin{frame}{数据实验}
 	\begin{enumerate}
-		\item 理论端
+		\item 历史数据
 		\begin{itemize}
-			\item 考虑交易成本
+			\item 沪深300名单内股票及指数月度收益数据
+			\item 时间范围2005.04(month85)至2021.12(month285)
 		\end{itemize}
-		\item  预测端
+		\item 因子
 		\begin{itemize}
-			\item 尝试更多ML/DNN方法
-		\end{itemize}
-		\item  策略端
-		\begin{itemize}
-			\item 改进滚动及调仓周期
-		\end{itemize}
-		\item  数据端
-		\begin{itemize}
-			\item 使用更高频数据
-		\end{itemize}
-		\item  求解方法
-		\begin{itemize}
-			\item 松弛线性规划（LP）
-			\item 次梯度算法（SA）
-			\item 遗传算法（GA）
-			\item 光滑化方法（SM）
+			\item \textbf{财务因子：}利润能力、偿债能力、资产周转率、现金流；
+			\item \textbf{成长因子：}营收增长、利润增长、现金流增长；
+			\item \textbf{市场因子：}股价相关、市值因子、动量；
+			\item \textbf{其他因子：}风险、交易量、评级、股东持股变化、技术指标；
 		\end{itemize}
 	\end{enumerate}
+	\begin{figure}
+		\centering
+		\includegraphics[width=1\linewidth]{pic/factors}
+		\caption{Factors}
+		\label{fig:factors}
+	\end{figure}
+\end{frame}
+
+\subsection{代码实现框架}
+\begin{frame}{选股及预测收益率}
+	\begin{enumerate}
+	\item 选股
+	\begin{itemize}
+		\item 沪深300名单内股票及指数月度收益数据
+		\item 时间范围2005.04(month85)至2021.12(month285)
+	\end{itemize}
+	\item 因子
+	\begin{itemize}
+		\item \textbf{财务因子：}利润能力、偿债能力、资产周转率、现金流；
+		\item \textbf{成长因子：}营收增长、利润增长、现金流增长；
+		\item \textbf{市场因子：}股价相关、市值因子、动量；
+		\item \textbf{其他因子：}风险、交易量、评级、股东持股变化、技术指标；
+	\end{itemize}
+\end{enumerate}
 \end{frame}
 
 

@@ -32,13 +32,12 @@ class Para():
     seed = 42  # -- random seed
     n_stock = 5166
 
-
 para = Para()
 
 train_data_min_months = 72  # 每次模型训练所用数据最少不低于
 train_data_max_months = 108  # 每次模型训练所用数据最大不超过
 train_update_months = 6  # 设置更新周期
-start_date = 82  # 第一次滚动训练开始日期
+start_date = 85  # 第一次滚动训练开始日期
 end_date = start_date + train_data_min_months  # 第一次滚动训练结束日期
 
 # 创建一个空的DataFrame
@@ -287,13 +286,13 @@ while end_date <= 284:
     portfolio_weights_df_cvar_ic = pd.DataFrame()
     portfolio_weights_df_cvar_corr = pd.DataFrame()
     # 创建一个空的DataFrame
-    portfolio_return_data_coef = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_ic = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_corr = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_cvar_coef = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_cvar_ic = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    portfolio_return_data_cvar_corr = pd.DataFrame(columns=['month', 'return', 'compound_value'])
-    return_data_hs300 = pd.DataFrame(columns=['month', 'return', 'compound_value'])
+    portfolio_return_data_coef = pd.DataFrame(columns=['month', 'return'])
+    portfolio_return_data_ic = pd.DataFrame(columns=['month', 'return'])
+    portfolio_return_data_corr = pd.DataFrame(columns=['month', 'return'])
+    portfolio_return_data_cvar_coef = pd.DataFrame(columns=['month', 'return'])
+    portfolio_return_data_cvar_ic = pd.DataFrame(columns=['month', 'return'])
+    portfolio_return_data_cvar_corr = pd.DataFrame(columns=['month', 'return'])
+    return_data_hs300 = pd.DataFrame(columns=['month', 'return'])
     for i_month_1 in period_test:
         # -- load
         file_name = para.path_data + str(i_month_1) + '.csv'
@@ -329,7 +328,7 @@ while end_date <= 284:
         selected_stocks_corr.set_index('code', inplace=True)
 
         # 整合历史与预测数据
-        period_select = range(test_date_start - 25, i_month_1)
+        period_select = range(test_date_start - 40, i_month_1)
         combined_y_curr_return_past = pd.DataFrame()
         for i_month_2 in period_select:
             # -- load
@@ -402,63 +401,26 @@ while end_date <= 284:
         portfolio_return_cvar_corr = np.dot(portfolio_weights_cvar_corr.T, y_curr_month_return_corr)
         hs300_idxrtn = hs300_return.loc[hs300_return['month'] == i_month_1, 'Idxrtn'].item()
 
-        # 计算累计值
-        if portfolio_return_data_coef.empty:
-            cumulative_value_coef = 1 + portfolio_return_coef
-        else:
-            previous_cumulative_value = portfolio_return_data_coef['compound_value'].iloc[-1]
-            cumulative_value_coef = previous_cumulative_value * (1 + portfolio_return_coef)
-        if portfolio_return_data_ic.empty:
-            cumulative_value_ic = 1 + portfolio_return_ic
-        else:
-            previous_cumulative_value = portfolio_return_data_ic['compound_value'].iloc[-1]
-            cumulative_value_ic = previous_cumulative_value * (1 + portfolio_return_ic)
-        if portfolio_return_data_corr.empty:
-            cumulative_value_corr = 1 + portfolio_return_corr
-        else:
-            previous_cumulative_value = portfolio_return_data_corr['compound_value'].iloc[-1]
-            cumulative_value_corr = previous_cumulative_value * (1 + portfolio_return_corr)
-        if portfolio_return_data_cvar_coef.empty:
-            cumulative_value_cvar_coef = 1 + portfolio_return_cvar_coef
-        else:
-            previous_cumulative_value = portfolio_return_data_cvar_coef['compound_value'].iloc[-1]
-            cumulative_value_cvar_coef = previous_cumulative_value * (1 + portfolio_return_cvar_coef)
-        if portfolio_return_data_cvar_ic.empty:
-            cumulative_value_cvar_ic = 1 + portfolio_return_cvar_ic
-        else:
-            previous_cumulative_value = portfolio_return_data_cvar_ic['compound_value'].iloc[-1]
-            cumulative_value_cvar_ic = previous_cumulative_value * (1 + portfolio_return_cvar_ic)
-        if portfolio_return_data_cvar_corr.empty:
-            cumulative_value_cvar_corr = 1 + portfolio_return_cvar_corr
-        else:
-            previous_cumulative_value = portfolio_return_data_cvar_corr['compound_value'].iloc[-1]
-            cumulative_value_cvar_corr = previous_cumulative_value * (1 + portfolio_return_cvar_corr)
-        if return_data_hs300.empty:
-            cumulative_value_hs300 = 1 + hs300_idxrtn
-        else:
-            previous_cumulative_value = return_data_hs300['compound_value'].iloc[-1]
-            cumulative_value_hs300= previous_cumulative_value * (1 + hs300_idxrtn)
-
         # 将收益数据添加到DataFrame中
-        row_coef = {'month': i_month_1, 'return': portfolio_return_coef, 'compound_value': cumulative_value_coef}
+        row_coef = {'month': i_month_1, 'return': portfolio_return_coef}
         portfolio_return_data_coef = pd.concat([portfolio_return_data_coef, pd.DataFrame(row_coef, index=[0])],
                                                ignore_index=True)
-        row_ic = {'month': i_month_1, 'return': portfolio_return_ic, 'compound_value': cumulative_value_ic}
+        row_ic = {'month': i_month_1, 'return': portfolio_return_ic}
         portfolio_return_data_ic = pd.concat([portfolio_return_data_ic, pd.DataFrame(row_ic, index=[0])],
                                              ignore_index=True)
-        row_corr = {'month': i_month_1, 'return': portfolio_return_corr, 'compound_value': cumulative_value_corr}
+        row_corr = {'month': i_month_1, 'return': portfolio_return_corr}
         portfolio_return_data_corr = pd.concat([portfolio_return_data_corr, pd.DataFrame(row_corr, index=[0])],
                                                ignore_index=True)
-        row_cvar_coef = {'month': i_month_1, 'return': portfolio_return_cvar_coef, 'compound_value': cumulative_value_cvar_coef}
+        row_cvar_coef = {'month': i_month_1, 'return': portfolio_return_cvar_coef}
         portfolio_return_data_cvar_coef = pd.concat([portfolio_return_data_cvar_coef, pd.DataFrame(row_cvar_coef, index=[0])],
                                                ignore_index=True)
-        row_cvar_ic = {'month': i_month_1, 'return': portfolio_return_cvar_ic, 'compound_value': cumulative_value_cvar_ic}
+        row_cvar_ic = {'month': i_month_1, 'return': portfolio_return_cvar_ic}
         portfolio_return_data_cvar_ic = pd.concat([portfolio_return_data_cvar_ic, pd.DataFrame(row_cvar_ic, index=[0])],
                                                ignore_index=True)
-        row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr, 'compound_value': cumulative_value_cvar_corr}
+        row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr}
         portfolio_return_data_cvar_corr = pd.concat([portfolio_return_data_cvar_corr, pd.DataFrame(row_cvar_corr, index=[0])],
                                                ignore_index=True)
-        row_hs300 = {'month': i_month_1, 'return': hs300_idxrtn, 'compound_value': cumulative_value_hs300}
+        row_hs300 = {'month': i_month_1, 'return': hs300_idxrtn}
         return_data_hs300 = pd.concat([return_data_hs300, pd.DataFrame(row_hs300, index=[0])],
                                                ignore_index=True)
 
@@ -481,7 +443,6 @@ while end_date <= 284:
         portfolio_weights_cvar_corr = np.concatenate(
             (portfolio_weights_cvar_corr, np.full(max_select - len(portfolio_weights_cvar_corr), np.nan)))
         stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
-  
 
         # 将最优投资组合权重和股票代码添加到DataFrame中
         portfolio_weights_df_coef[str(i_month_1) + '_code'] = stock_codes_coef
@@ -591,95 +552,87 @@ while end_date <= 284:
     if end_date + 6 >= 284:
         break
 
+#计算累计收益
+return_data_combined_coef['compound_value'] = (return_data_combined_coef['return']+1).cumprod()
+return_data_combined_cvar_coef['compound_value'] = (return_data_combined_cvar_coef['return']+1).cumprod()
+return_data_combined_ic['compound_value'] = (return_data_combined_ic['return']+1).cumprod()
+return_data_combined_cvar_ic['compound_value'] = (return_data_combined_cvar_ic['return']+1).cumprod()
+return_data_combined_corr['compound_value'] = (return_data_combined_corr['return']+1).cumprod()
+return_data_combined_cvar_corr['compound_value'] = (return_data_combined_cvar_corr['return']+1).cumprod()
+return_data_combined_hs300['compound_value'] = (return_data_combined_hs300['return']+1).cumprod()
+
 import matplotlib.pyplot as plt
+# 设置风格和配色方案
+plt.style.use('seaborn-darkgrid')
+plt.rcParams['axes.facecolor'] = 'whitesmoke'  # 设置背景色
 
-# 绘制曲线图1
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['return'], label='return_1')
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['compound_value'], label='compound_value_1')
-# 添加图例和标签
+# 第一张图
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 1, 1)
+plt.plot(return_data_combined_coef['month'], return_data_combined_coef['return'], label='return_coef', color='blue')
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color='purple')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
 plt.legend()
 plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data Combined 1')
-# 显示图像
+plt.ylabel('Return')
+plt.title('Return Data Combined Coef')
+
+plt.subplot(2, 1, 2)
+plt.plot(return_data_combined_coef['month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color='orange')
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color='brown')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Compound Value')
+
+plt.tight_layout()
 plt.show()
 
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图2
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef')
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef')
-# 添加图例和标签
+# 第二张图
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 1, 1)
+plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_ic', color='green')
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color='purple')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
 plt.legend()
 plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data VaR_Coef')
-# 显示图像
+plt.ylabel('Return')
+plt.title('Return Data Combined Ic')
+
+plt.subplot(2, 1, 2)
+plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color='red')
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color='brown')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Compound Value')
+
+plt.tight_layout()
 plt.show()
 
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图3
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_2')
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_2')
-# 添加图例和标签
-plt.legend()
-plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data Combined 2')
-# 显示图像
-plt.show()
+# 第三张图
+plt.figure(figsize=(10, 8))
 
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图4
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic')
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic')
-# 添加图例和标签
+plt.subplot(2, 1, 1)
+plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_corr', color='magenta')
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color='yellow')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
 plt.legend()
 plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data VaR_ic')
-# 显示图像
-plt.show()
+plt.ylabel('Return')
+plt.title('Return Data Combined Corr')
 
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图5
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_3')
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_3')
-# 添加图例和标签
+plt.subplot(2, 1, 2)
+plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color='cyan')
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color='black')
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
 plt.legend()
 plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data Combined 3')
-# 显示图像
-plt.show()
+plt.ylabel('Compound Value')
 
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图6
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr')
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr')
-# 添加图例和标签
-plt.legend()
-plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data VaR_corr')
-# 显示图像
-plt.show()
-
-# 创建新的图像窗口
-plt.figure()
-# 绘制曲线图6
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300')
-# 添加图例和标签
-plt.legend()
-plt.xlabel('Month')
-plt.ylabel('Value')
-plt.title('Return Data hs300')
-# 显示图像
+plt.tight_layout()
 plt.show()
 
 print('回归系数下因子权重收益:', return_data_combined_coef['return'].mean())

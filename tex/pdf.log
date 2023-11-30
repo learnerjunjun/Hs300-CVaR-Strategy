@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  24 NOV 2023 21:47
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  30 NOV 2023 20:53
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1326,7 +1326,10 @@ cmr/m/n/10.95 )[]([])[][]
 
 ] [8
 
-] [9
+]
+File: pic/factors.png Graphic file (type bmp)
+<pic/factors.png>
+ [9
 
 ] [10
 
@@ -1349,11 +1352,11 @@ Package rerunfilecheck Info: File `pdf.out' has not changed.
 (rerunfilecheck)             Checksum: F5FEF1AC9792745E6D293A137CBCB810;922.
  ) 
 Here is how much of TeX's memory you used:
- 28508 strings out of 475591
- 612700 string characters out of 5777375
+ 28557 strings out of 475591
+ 614986 string characters out of 5777375
  1935432 words of memory out of 5000000
- 49247 multiletter control sequences out of 15000+600000
- 566837 words of font info for 112 fonts, out of 8000000 for 9000
+ 49293 multiletter control sequences out of 15000+600000
+ 566853 words of font info for 114 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  128i,20n,123p,434b,815s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
