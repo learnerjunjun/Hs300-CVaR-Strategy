@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  1 DEC 2023 16:32
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  2 DEC 2023 00:04
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1338,59 +1338,49 @@ Overfull \vbox (5.32545pt too high) detected at line 264
 File: pic/Coef.png Graphic file (type bmp)
 <pic/Coef.png>
 
-Overfull \vbox (42.85529pt too high) detected at line 300
+Overfull \vbox (51.04211pt too high) detected at line 300
  []
 
 [14
 
 ]
-File: pic/Coef_dramdown.png Graphic file (type bmp)
-<pic/Coef_dramdown.png>
-
-Overfull \vbox (42.85529pt too high) detected at line 314
- []
-
-[15
+File: pic/Drawdown_Comparison_Coef.png Graphic file (type bmp)
+<pic/Drawdown_Comparison_Coef.png>
+ [15
 
 ]
 File: pic/IC.png Graphic file (type bmp)
 <pic/IC.png>
 
-Overfull \vbox (42.78958pt too high) detected at line 328
+Overfull \vbox (51.04211pt too high) detected at line 327
  []
 
 [16
 
 ]
-File: pic/IC_dramdown.png Graphic file (type bmp)
-<pic/IC_dramdown.png>
-
-Overfull \vbox (42.85529pt too high) detected at line 342
- []
-
-[17
+File: pic/Drawdown_Comparison_IC.png Graphic file (type bmp)
+<pic/Drawdown_Comparison_IC.png>
+ [17
 
 ]
 File: pic/Corr.png Graphic file (type bmp)
 <pic/Corr.png>
 
-Overfull \vbox (42.88814pt too high) detected at line 356
+Overfull \vbox (51.07497pt too high) detected at line 354
  []
 
 [18
 
 ]
-File: pic/Corr_dramdown.png Graphic file (type bmp)
-<pic/Corr_dramdown.png>
-
-Overfull \vbox (42.85529pt too high) detected at line 370
- []
-
-[19
+File: pic/Drawdown_Comparison_Corr.png Graphic file (type bmp)
+<pic/Drawdown_Comparison_Corr.png>
+ [19
 
 ] [20
 
 ] [21
+
+] [22
 
 ]
 \tf@nav=\write6
@@ -1408,15 +1398,15 @@ LaTeX2e <2023-06-01> patch level 1
 L3 programming layer <2022/08/05>
  ***********
 Package rerunfilecheck Info: File `pdf.out' has not changed.
-(rerunfilecheck)             Checksum: E164C7F5ADE2AEF236076B92E01EBD93;2055.
+(rerunfilecheck)             Checksum: 9D0F068B679664B8AA1AB760A92D7C31;2147.
  ) 
 Here is how much of TeX's memory you used:
- 28785 strings out of 475591
- 619462 string characters out of 5777375
- 1945432 words of memory out of 5000000
- 49503 multiletter control sequences out of 15000+600000
+ 28790 strings out of 475591
+ 620168 string characters out of 5777375
+ 1946432 words of memory out of 5000000
+ 49508 multiletter control sequences out of 15000+600000
  568624 words of font info for 131 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  128i,20n,123p,434b,815s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on pdf.pdf (21 pages).
+Output written on pdf.pdf (22 pages).

@@ -77,19 +77,23 @@
 \headcommand {\beamer@subsectionentry {0}{3}{10}{19}{策略回测}}
 \headcommand {\slideentry {3}{10}{1}{19/19}{策略回测}{0}}
 \headcommand {\beamer@framepages {19}{19}}
-\headcommand {\beamer@sectionpages {9}{19}}
 \headcommand {\beamer@subsectionpages {19}{19}}
-\headcommand {\sectionentry {4}{结论与不足}{20}{结论与不足}{0}}
-\headcommand {\beamer@subsectionpages {20}{19}}
-\headcommand {\beamer@subsectionentry {0}{4}{1}{20}{结论}}
-\headcommand {\slideentry {4}{1}{1}{20/20}{结论}{0}}
+\headcommand {\beamer@subsectionentry {0}{3}{11}{20}{策略评价}}
+\headcommand {\slideentry {3}{11}{1}{20/20}{策略评价}{0}}
 \headcommand {\beamer@framepages {20}{20}}
+\headcommand {\beamer@sectionpages {9}{20}}
 \headcommand {\beamer@subsectionpages {20}{20}}
-\headcommand {\beamer@subsectionentry {0}{4}{2}{21}{不足与改进}}
-\headcommand {\slideentry {4}{2}{1}{21/21}{不足与改进}{0}}
+\headcommand {\sectionentry {4}{结论与不足}{21}{结论与不足}{0}}
+\headcommand {\beamer@subsectionpages {21}{20}}
+\headcommand {\beamer@subsectionentry {0}{4}{1}{21}{结论}}
+\headcommand {\slideentry {4}{1}{1}{21/21}{结论}{0}}
 \headcommand {\beamer@framepages {21}{21}}
-\headcommand {\beamer@partpages {1}{21}}
 \headcommand {\beamer@subsectionpages {21}{21}}
-\headcommand {\beamer@sectionpages {20}{21}}
-\headcommand {\beamer@documentpages {21}}
-\headcommand {\gdef \inserttotalframenumber {21}}
+\headcommand {\beamer@subsectionentry {0}{4}{2}{22}{不足与改进}}
+\headcommand {\slideentry {4}{2}{1}{22/22}{不足与改进}{0}}
+\headcommand {\beamer@framepages {22}{22}}
+\headcommand {\beamer@partpages {1}{22}}
+\headcommand {\beamer@subsectionpages {22}{22}}
+\headcommand {\beamer@sectionpages {21}{22}}
+\headcommand {\beamer@documentpages {22}}
+\headcommand {\gdef \inserttotalframenumber {22}}

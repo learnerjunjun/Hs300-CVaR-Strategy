@@ -34,7 +34,7 @@ class Para():
 para = Para()
 
 train_data_min_months = 60  # 每次模型训练所用数据最少不低于
-train_data_max_months = 108  # 每次模型训练所用数据最大不超过
+train_data_max_months = 84  # 每次模型训练所用数据最大不超过
 train_update_months = 3  # 设置更新周期
 start_date = 85  # 第一次滚动训练开始日期
 end_date = start_date + train_data_min_months  # 第一次滚动训练结束日期
@@ -311,7 +311,7 @@ while end_date <= 284:
         scores_coef = X_for_score.dot(factor_weights_coef)
         scores_ic = X_for_score.dot(factor_weights_ic)
         scores_corr = X_for_score.dot(factor_weights_corr)
-        n = 30
+        n = max_select + 10
         selected_stocks_coef = scores_coef.nlargest(n)
         selected_stocks_ic = scores_ic.nlargest(n)
         selected_stocks_corr = scores_corr.nlargest(n)
@@ -349,30 +349,30 @@ while end_date <= 284:
         combined_return_data[i_month_1] = combined_y_pred_return[i_month_1]
 
         # 筛选出打分法得到的股票
-        top_20_stocks_idx_coef = selected_stocks_coef.index[:20]
-        top_20_stocks_return_coef = combined_return_data.loc[
-            combined_return_data.index.intersection(top_20_stocks_idx_coef)]
-        top_20_stocks_return_coef = top_20_stocks_return_coef.dropna()
-        top_20_stocks_idx_ic = selected_stocks_ic.index[:20]
-        top_20_stocks_return_ic = combined_return_data.loc[
-            combined_return_data.index.intersection(top_20_stocks_idx_ic)]
-        top_20_stocks_return_ic = top_20_stocks_return_ic.dropna()
-        top_20_stocks_idx_corr = selected_stocks_corr.index[:20]
-        top_20_stocks_return_corr = combined_return_data.loc[
-            combined_return_data.index.intersection(top_20_stocks_idx_corr)]
-        top_20_stocks_return_corr = top_20_stocks_return_corr.dropna()
+        top_select_stocks_idx_coef = selected_stocks_coef.index[:max_select]
+        top_select_stocks_return_coef = combined_return_data.loc[
+            combined_return_data.index.intersection(top_select_stocks_idx_coef)]
+        top_select_stocks_return_coef = top_select_stocks_return_coef.dropna()
+        top_select_stocks_idx_ic = selected_stocks_ic.index[:max_select]
+        top_select_stocks_return_ic = combined_return_data.loc[
+            combined_return_data.index.intersection(top_select_stocks_idx_ic)]
+        top_select_stocks_return_ic = top_select_stocks_return_ic.dropna()
+        top_select_stocks_idx_corr = selected_stocks_corr.index[:max_select]
+        top_select_stocks_return_corr = combined_return_data.loc[
+            combined_return_data.index.intersection(top_select_stocks_idx_corr)]
+        top_select_stocks_return_corr = top_select_stocks_return_corr.dropna()
 
         # 计算收益率的协方差矩阵
-        cov_matrix_coef = top_20_stocks_return_coef.T.cov()
-        cov_matrix_ic = top_20_stocks_return_ic.T.cov()
-        cov_matrix_corr = top_20_stocks_return_corr.T.cov()
+        cov_matrix_coef = top_select_stocks_return_coef.T.cov()
+        cov_matrix_ic = top_select_stocks_return_ic.T.cov()
+        cov_matrix_corr = top_select_stocks_return_corr.T.cov()
         # 获取 i_month_1 对应的收益均值和股票代码
-        mean_returns_coef = top_20_stocks_return_coef.loc[:, i_month_1]
-        stock_codes_coef = top_20_stocks_return_coef.index.tolist()
-        mean_returns_ic = top_20_stocks_return_ic.loc[:, i_month_1]
-        stock_codes_ic = top_20_stocks_return_ic.index.tolist()
-        mean_returns_corr = top_20_stocks_return_corr.loc[:, i_month_1]
-        stock_codes_corr = top_20_stocks_return_corr.index.tolist()
+        mean_returns_coef = top_select_stocks_return_coef.loc[:, i_month_1]
+        stock_codes_coef = top_select_stocks_return_coef.index.tolist()
+        mean_returns_ic = top_select_stocks_return_ic.loc[:, i_month_1]
+        stock_codes_ic = top_select_stocks_return_ic.index.tolist()
+        mean_returns_corr = top_select_stocks_return_corr.loc[:, i_month_1]
+        stock_codes_corr = top_select_stocks_return_corr.index.tolist()
 
         # 使用均值-方差模型计算最优投资组合权重
         portfolio_weights_coef = calculate_portfolio_weights(mean_returns_coef, cov_matrix_coef)
@@ -381,9 +381,9 @@ while end_date <= 284:
         
         # 使用CVaR计算最优方差
         confidence_level = 0.99
-        returns_cvar_coef = top_20_stocks_return_coef
-        returns_cvar_ic = top_20_stocks_return_ic
-        returns_cvar_corr = top_20_stocks_return_corr
+        returns_cvar_coef = top_select_stocks_return_coef
+        returns_cvar_ic = top_select_stocks_return_ic
+        returns_cvar_corr = top_select_stocks_return_corr
         cvar_coef, portfolio_weights_cvar_coef = minimize_cvar(returns_cvar_coef, confidence_level)
         cvar_ic, portfolio_weights_cvar_ic = minimize_cvar(returns_cvar_ic, confidence_level)
         cvar_corr, portfolio_weights_cvar_corr = minimize_cvar(returns_cvar_corr, confidence_level)
@@ -423,7 +423,7 @@ while end_date <= 284:
         return_data_hs300 = pd.concat([return_data_hs300, pd.DataFrame(row_hs300, index=[0])],
                                                ignore_index=True)
 
-        # 使用NaN将数据补齐至长度为20
+        # 使用NaN将数据补齐至长度为max_select
         portfolio_weights_coef = np.concatenate(
             (portfolio_weights_coef, np.full(max_select - len(portfolio_weights_coef), np.nan)))
         stock_codes_coef = np.concatenate((stock_codes_coef, np.full(max_select - len(stock_codes_coef), np.nan)))
@@ -548,7 +548,7 @@ while end_date <= 284:
         start_date = end_date - train_data_max_months
     else:
         start_date = start_date
-    if end_date + 6 >= 284:
+    if end_date + 3 >= 284:
         break
 
 #计算累计收益
@@ -643,12 +643,15 @@ plt.figure(dpi=300)
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
 # 第一张图
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(12, 8))
 
 plt.subplot(2, 1, 1)
 plt.plot(return_data_combined_coef['Month'], return_data_combined_coef['return'], label='return_coef', color=colors[0])
 plt.plot(return_data_combined_cvar_coef['Month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color=colors[1])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[2])
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -659,6 +662,10 @@ plt.subplot(2, 1, 2)
 plt.plot(return_data_combined_coef['Month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color=colors[3])
 plt.plot(return_data_combined_cvar_coef['Month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color=colors[4])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[5])
+# 设置日期显示的间隔和格式
+# 设置日期显示的间隔和格式
+date_interval = 6 # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -674,7 +681,10 @@ plot_drawdown_with_max(return_data_combined_coef, 'return_data_combined_coef')
 plot_drawdown_with_max(return_data_combined_cvar_coef, 'return_data_combined_cvar_coef')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(0, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.5)  # 调整y轴范围
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()
@@ -685,12 +695,15 @@ plt.savefig('Drawdown_Comparison_Coef.png', dpi=300)
 plt.show()
 
 # 第二张图
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(12, 8))
 
 plt.subplot(2, 1, 1)
 plt.plot(return_data_combined_ic['Month'], return_data_combined_ic['return'], label='return_ic', color=colors[6])
 plt.plot(return_data_combined_cvar_ic['Month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color=colors[7])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[8])
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -701,6 +714,9 @@ plt.subplot(2, 1, 2)
 plt.plot(return_data_combined_ic['Month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color=colors[0])
 plt.plot(return_data_combined_cvar_ic['Month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color=colors[1])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[2])
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -717,7 +733,10 @@ plot_drawdown_with_max(return_data_combined_ic, 'return_data_combined_ic')
 plot_drawdown_with_max(return_data_combined_cvar_ic, 'return_data_combined_cvar_ic')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(0, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.5)  # 调整y轴范围
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()
@@ -728,12 +747,15 @@ plt.savefig('Drawdown_Comparison_IC.png', dpi=300)
 plt.show()
 
 # 第三张图
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(12, 8))
 
 plt.subplot(2, 1, 1)
 plt.plot(return_data_combined_corr['Month'], return_data_combined_corr['return'], label='return_corr', color=colors[3])
 plt.plot(return_data_combined_cvar_corr['Month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color=colors[4])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[5])
+# 设置日期显示的间隔和格式
+date_interval = 6 # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -744,6 +766,9 @@ plt.subplot(2, 1, 2)
 plt.plot(return_data_combined_corr['Month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color=colors[6])
 plt.plot(return_data_combined_cvar_corr['Month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color=colors[7])
 plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[8])
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
@@ -760,7 +785,10 @@ plot_drawdown_with_max(return_data_combined_corr, 'return_data_combined_corr')
 plot_drawdown_with_max(return_data_combined_cvar_corr, 'return_data_combined_cvar_corr')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(0, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.5)  # 调整y轴范围
+# 设置日期显示的间隔和格式
+date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
+plt.xticks(ticks=plt.xticks()[0][::date_interval])
 plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()

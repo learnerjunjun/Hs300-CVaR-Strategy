@@ -288,12 +288,12 @@
 \subsection{策略回测}
 \begin{frame}{策略收益表现-Coef}
 	\begin{itemize}
-		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
-		\item MV策略总体优于CVaR
+		\item 10年期收益及累计收益； 总体没有稳定明显地跑赢指数； 
+		\item CVaR策略总体优于MV策略
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{pic/Coef}
+		\includegraphics[width=1\linewidth]{pic/Coef}
 		\caption{Return and Compound Value}
 		\label{fig:coef}
 	\end{figure}
@@ -302,13 +302,12 @@
 \subsection{策略回测}
 \begin{frame}{策略回撤-Coef}
 	\begin{itemize}
-		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
-		\item MV策略总体优于CVaR
+		\item 两种策略最大回撤在 $30\%-40\%$，总体上回撤幅度低于指数
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{"pic/Coef_dramdown"}
-		\caption{}
+		\includegraphics[width=1\linewidth]{"pic/Drawdown_Comparison_Coef"}
+		\caption{Drawdown Comparison Coef}
 		\label{fig:coefdramdown}
 	\end{figure}
 \end{frame}
@@ -316,12 +315,12 @@
 \subsection{策略回测}
 \begin{frame}{策略收益表现-IC}
 	\begin{itemize}
-		\item 总体上基本可以跑赢指数； 
-		\item MV策略与CVaR策略接近
+		\item 总体上完全可以跑赢指数； 
+		\item CVaR策略完全优于MV策略
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{pic/IC}
+		\includegraphics[width=1\linewidth]{pic/IC}
 		\caption{Return and Compound Value}
 		\label{fig:ic}
 	\end{figure}
@@ -330,13 +329,12 @@
 \subsection{策略回测}
 \begin{frame}{策略回撤-IC}
 	\begin{itemize}
-		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
-		\item MV策略总体优于CVaR
+		\item 在2020.05之后，回撤幅度大幅增加
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{"pic/IC_dramdown"}
-		\caption{}
+		\includegraphics[width=1\linewidth]{"pic/Drawdown_Comparison_IC"}
+		\caption{Drawdown Comparison IC}
 		\label{fig:icdramdown}
 	\end{figure}
 \end{frame}
@@ -349,7 +347,7 @@
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{pic/Corr}
+		\includegraphics[width=1\linewidth]{pic/Corr}
 		\caption{Return and Compound Value}
 		\label{fig:corr}
 	\end{figure}
@@ -358,15 +356,48 @@
 \subsection{策略回测}
 \begin{frame}{策略回撤-Corr}
 	\begin{itemize}
-		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
-		\item MV策略总体优于CVaR
+		\item 总体上回撤幅度较小
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=0.8\linewidth]{"pic/Corr_dramdown"}
-		\caption{}
+		\includegraphics[width=1\linewidth]{"pic/Drawdown_Comparison_Corr"}
+		\caption{Drawdown Comparison Corr}
 		\label{fig:corrdramdown}
 	\end{figure}
+\end{frame}
+
+\subsection{策略评价}
+\begin{frame}{策略对比评价}
+	\begin{itemize}
+		\item CVaR策略基本优于MV策略；
+		\item 使用Corr方法选股+CVaR策略最优
+	\end{itemize}
+	\begin{table}[htbp]
+		\centering
+		\resizebox{\textwidth}{!}{%
+		\begin{tabular}{|c|c|c|c|c|c|}
+			\toprule
+			\textbf{Strategy} & \textbf{最大回撤} & \textbf{夏普比率} & \textbf{信息比率} & \textbf{年化收益率} & \textbf{收益回撤比} \\
+			\midrule
+			Coef  & 0.398 & 0.648 & -0.767 & 1.877\% & 4.720\% \\
+			\midrule
+			Cvar\_coef & 0.321 & 1.377 & -0.428 & 4.117\% & 12.844\% \\
+			\midrule
+			Ic    & 0.364 & 1.497 & -0.403 & 4.354\% & 11.961\% \\
+			\midrule
+			Cvar\_ic & 0.520 & 1.644 & -0.160 & 5.812\% & 11.179\% \\
+			\midrule
+			Corr  & 0.197 & 3.151 & 0.486 & 9.886\% & 50.094\% \\
+			\midrule
+			Cvar\_corr & 0.156 & 2.907 & 0.919 & 13.101\% & 84.249\% \\
+			\midrule
+			hs300 & 0.406 & 1.336 & 0.000 & 6.845\% & 16.877\% \\
+			\bottomrule
+		\end{tabular}%
+		}
+		\caption{Strategy Comparison}
+		\label{tab:addlabel}%
+	\end{table}%
 \end{frame}
 
 \section{结论与不足}
@@ -376,26 +407,6 @@
 	\item 理论端
 		\begin{itemize}
 			\item 考虑交易成本
-		\end{itemize}
-	\item  预测端
-		\begin{itemize}
-			\item 尝试更多ML/DNN方法
-		\end{itemize}
-	\item  策略端
-		\begin{itemize}
-			\item 改进滚动及调仓周期
-			\item 改进因子配比方法
-		\end{itemize}
-	\item  数据端
-		\begin{itemize}
-			\item 使用更高频数据
-		\end{itemize}
-	\item  求解方法
-		\begin{itemize}
-			\item 松弛线性规划（LP）
-			\item 次梯度算法（SA）
-			\item 遗传算法（GA）
-			\item 光滑化方法（SM）
 		\end{itemize}
 	\end{enumerate}
 \end{frame}
