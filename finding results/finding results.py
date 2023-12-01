@@ -31,12 +31,11 @@ class Para():
     path_results = './results/'
     seed = 42  # -- random seed
     n_stock = 5166
-
 para = Para()
 
 train_data_min_months = 72  # 每次模型训练所用数据最少不低于
 train_data_max_months = 108  # 每次模型训练所用数据最大不超过
-train_update_months = 6  # 设置更新周期
+train_update_months = 3  # 设置更新周期
 start_date = 85  # 第一次滚动训练开始日期
 end_date = start_date + train_data_min_months  # 第一次滚动训练结束日期
 
@@ -175,7 +174,7 @@ while end_date <= 284:
 
     # 样本外预测
     test_date_start = end_date + 1
-    test_date_end = end_date + 6
+    test_date_end = end_date + 3
     period_test = range(test_date_start, test_date_end + 1)
     combined_y_pred_return = pd.DataFrame()
     combined_y_curr_return = pd.DataFrame()
@@ -561,78 +560,198 @@ return_data_combined_corr['compound_value'] = (return_data_combined_corr['return
 return_data_combined_cvar_corr['compound_value'] = (return_data_combined_cvar_corr['return']+1).cumprod()
 return_data_combined_hs300['compound_value'] = (return_data_combined_hs300['return']+1).cumprod()
 
+# 计算回撤
+def calculate_drawdown(data):
+    data['peak_value'] = data['compound_value'].cummax()
+    data['drawdown'] = (data['peak_value'] - data['compound_value']) / data['peak_value']
+    max_drawdown = data['drawdown'].max()
+    return data, max_drawdown
+
+# 计算夏普比率
+def calculate_sharpe_ratio(data, risk_free_rate):
+    annual_return = data['return'].mean() * 252
+    annual_std_dev = data['return'].std() * np.sqrt(252)
+    sharpe_ratio = (annual_return - risk_free_rate) / annual_std_dev if annual_std_dev != 0 else 0
+    return sharpe_ratio
+
+# 计算信息比率
+def calculate_information_ratio(data_strategy, data_benchmark, risk_free_rate):
+    annual_return_strategy = data_strategy['return'].mean() * 252
+    annual_return_benchmark = data_benchmark['return'].mean() * 252
+    excess_returns = data_strategy['return'] - data_benchmark['return']
+    annual_std_dev_excess = excess_returns.std() * np.sqrt(252)
+    information_ratio = (
+                                    annual_return_strategy - annual_return_benchmark - risk_free_rate) / annual_std_dev_excess if annual_std_dev_excess != 0 else 0
+    return information_ratio
+
+# 储存所有数据列
+data_columns = [
+    'return_data_combined_coef',
+    'return_data_combined_cvar_coef',
+    'return_data_combined_ic',
+    'return_data_combined_cvar_ic',
+    'return_data_combined_corr',
+    'return_data_combined_cvar_corr',
+    'return_data_combined_hs300'
+]
+risk_free_rate = 0  # 无风险利率假设为0
+results = []
+for column_name in data_columns:
+    data_to_process = globals()[column_name]
+    data_to_process, max_drawdown = calculate_drawdown(data_to_process)
+    sharpe_ratio = calculate_sharpe_ratio(data_to_process, risk_free_rate)
+
+    benchmark_data = return_data_combined_hs300  # 假设基准为return_data_combined_hs300
+    information_ratio = calculate_information_ratio(data_to_process, benchmark_data, risk_free_rate)
+
+    result = {
+        'Column': column_name,
+        'Max Drawdown': max_drawdown,
+        'Sharpe Ratio': sharpe_ratio,
+        'Information Ratio': information_ratio
+    }
+    results.append(result)
+# 将结果存储在 DataFrame 中
+results_df = pd.DataFrame(results)
+# 将DataFrame输出到Excel文件
+results_df.to_excel('evaluation results.xlsx', index=False)
+print(results_df)
+
+
 import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 绘制回撤曲线并标注最大回撤
+# 绘制回撤曲线并标注最大回撤
+def plot_drawdown_with_max(data, column_name):
+    data, max_drawdown = calculate_drawdown(data)
+    plt.plot(data['month'], data['drawdown'], label=column_name)
+    max_drawdown_index = data['drawdown'].idxmax()
+    plt.annotate(f'Max DD: {max_drawdown:.2f}',
+                 xy=(data['month'][max_drawdown_index], data['drawdown'][max_drawdown_index]),
+                 xytext=(data['month'][max_drawdown_index], data['drawdown'][max_drawdown_index] + 0.1),
+                 arrowprops=dict(facecolor='black', arrowstyle='->'))
+
 # 设置风格和配色方案
-plt.style.use('seaborn-darkgrid')
+sns.set_palette("pastel")
 plt.rcParams['axes.facecolor'] = 'whitesmoke'  # 设置背景色
+plt.figure(dpi=300)
+
+# 自定义颜色列表
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
 # 第一张图
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['return'], label='return_coef', color='blue')
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color='purple')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
+plt.plot(return_data_combined_coef['month'], return_data_combined_coef['return'], label='return_coef', color=colors[0])
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color=colors[1])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[2])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Coef')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color='orange')
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color='brown')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
+plt.plot(return_data_combined_coef['month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color=colors[3])
+plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color=colors[4])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[5])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
 
+plt.savefig('Coef.png', dpi=300)
 plt.tight_layout()
+plt.show()
+
+# 绘制三条回撤曲线在同一张图上
+plt.figure(figsize=(10, 8))
+# 绘制回撤曲线
+plot_drawdown_with_max(return_data_combined_coef, 'return_data_combined_coef')
+plot_drawdown_with_max(return_data_combined_cvar_coef, 'return_data_combined_cvar_coef')
+plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 配置图例、标签和标题
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Drawdown')
+plt.title('Drawdown Comparison')
+plt.savefig('Drawdown_Comparison_Coef.png', dpi=300)
 plt.show()
 
 # 第二张图
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_ic', color='green')
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color='purple')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
+plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_ic', color=colors[6])
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color=colors[7])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[8])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Ic')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color='red')
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color='brown')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
+plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color=colors[0])
+plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color=colors[1])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[2])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
 
+plt.savefig('IC.png', dpi=300)
 plt.tight_layout()
+plt.show()
+
+# 绘制三条回撤曲线在同一张图上
+plt.figure(figsize=(10, 8))
+# 绘制回撤曲线
+plot_drawdown_with_max(return_data_combined_ic, 'return_data_combined_ic')
+plot_drawdown_with_max(return_data_combined_cvar_ic, 'return_data_combined_cvar_ic')
+plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 配置图例、标签和标题
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Drawdown')
+plt.title('Drawdown Comparison')
+plt.savefig('Drawdown_Comparison_IC.png', dpi=300)
 plt.show()
 
 # 第三张图
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_corr', color='magenta')
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color='yellow')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color='lime')
+plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_corr', color=colors[3])
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color=colors[4])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[5])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Corr')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color='cyan')
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color='black')
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color='pink')
+plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color=colors[6])
+plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color=colors[7])
+plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[8])
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
 
+plt.savefig('Corr.png', dpi=300)
 plt.tight_layout()
+plt.show()
+
+# 绘制三条回撤曲线在同一张图上
+plt.figure(figsize=(10, 8))
+# 绘制回撤曲线
+plot_drawdown_with_max(return_data_combined_corr, 'return_data_combined_corr')
+plot_drawdown_with_max(return_data_combined_cvar_corr, 'return_data_combined_cvar_corr')
+plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 配置图例、标签和标题
+plt.legend()
+plt.xlabel('Month')
+plt.ylabel('Drawdown')
+plt.title('Drawdown Comparison')
+plt.savefig('Drawdown_Comparison_Corr.png', dpi=300)
 plt.show()
 
 print('回归系数下因子权重收益:', return_data_combined_coef['return'].mean())

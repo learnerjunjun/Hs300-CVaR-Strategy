@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  30 NOV 2023 20:53
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  1 DEC 2023 14:49
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1104,12 +1104,12 @@ LaTeX Font Info:    ... okay on input line 39.
 * layout: <same size as paper>
 * layoutoffset:(h,v)=(0.0pt,0.0pt)
 * modes: includehead includefoot 
-* h-part:(L,W,R)=(28.45274pt, 398.3386pt, 28.45274pt)
-* v-part:(T,H,B)=(0.0pt, 256.0748pt, 0.0pt)
-* \paperwidth=455.24408pt
-* \paperheight=256.0748pt
-* \textwidth=398.3386pt
-* \textheight=227.62207pt
+* h-part:(L,W,R)=(28.45274pt, 307.28987pt, 28.45274pt)
+* v-part:(T,H,B)=(0.0pt, 273.14662pt, 0.0pt)
+* \paperwidth=364.19536pt
+* \paperheight=273.14662pt
+* \textwidth=307.28987pt
+* \textheight=244.6939pt
 * \oddsidemargin=-43.81725pt
 * \evensidemargin=-43.81725pt
 * \topmargin=-72.26999pt
@@ -1290,18 +1290,15 @@ Package hyperref Warning: Option `pdfauthor' has already been used,
 ]
 File: pic/distribution of random six.png Graphic file (type bmp)
 <pic/distribution of random six.png>
-
-Overfull \vbox (25.16216pt too high) detected at line 62
- []
-
-[3
+ [3
 
 ] [4
 
 ]
 LaTeX Font Info:    Trying to load font information for U+msa on input line 107
 .
- (d:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd
+
+(d:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
 LaTeX Font Info:    Trying to load font information for U+msb on input line 107
@@ -1311,27 +1308,85 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 107
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [5
 
-]
-Overfull \hbox (9.15155pt too wide) detected at line 129
-[] \OT1/cmr/m/n/10.95 : \OML/cmm/m/it/10.95 ^^^[]\OT1/cmr/m/n/10.95 ([]) = [][[
-]([]\OML/cmm/m/it/10.95 ; []\OT1/cmr/m/n/10.95 )\OMS/cmsy/m/n/10.95 j[]\OT1/cmr
-/m/n/10.95 ([]\OML/cmm/m/it/10.95 ; []\OT1/cmr/m/n/10.95 ) \OMS/cmsy/m/n/10.95 
-^^U [][][]\OT1/cmr/m/n/10.95 ([])] = [] [][] []([]\OML/cmm/m/it/10.95 ; []\OT1/
-cmr/m/n/10.95 )[]([])[][]
- []
-
-[6
+] [6
 
 ] [7
 
 ] [8
 
 ]
-File: pic/factors.png Graphic file (type bmp)
-<pic/factors.png>
- [9
+[9
 
-] [10
+]
+File: pic/scree_plot.png Graphic file (type bmp)
+<pic/scree_plot.png>
+
+Overfull \vbox (37.80367pt too high) detected at line 222
+ []
+
+[10
+
+] [11
+
+] [12
+
+] [13
+
+]
+File: pic/Coef.png Graphic file (type bmp)
+<pic/Coef.png>
+
+Overfull \vbox (42.85529pt too high) detected at line 296
+ []
+
+[14
+
+]
+File: pic/Coef_dramdown.png Graphic file (type bmp)
+<pic/Coef_dramdown.png>
+
+Overfull \vbox (42.85529pt too high) detected at line 310
+ []
+
+[15
+
+]
+File: pic/IC.png Graphic file (type bmp)
+<pic/IC.png>
+
+Overfull \vbox (42.78958pt too high) detected at line 324
+ []
+
+[16
+
+]
+File: pic/IC_dramdown.png Graphic file (type bmp)
+<pic/IC_dramdown.png>
+
+Overfull \vbox (42.85529pt too high) detected at line 338
+ []
+
+[17
+
+]
+File: pic/Corr.png Graphic file (type bmp)
+<pic/Corr.png>
+
+Overfull \vbox (42.88814pt too high) detected at line 352
+ []
+
+[18
+
+]
+File: pic/Corr_dramdown.png Graphic file (type bmp)
+<pic/Corr_dramdown.png>
+
+Overfull \vbox (42.85529pt too high) detected at line 366
+ []
+
+[19
+
+] [20
 
 ]
 \tf@nav=\write6
@@ -1349,15 +1404,15 @@ LaTeX2e <2023-06-01> patch level 1
 L3 programming layer <2022/08/05>
  ***********
 Package rerunfilecheck Info: File `pdf.out' has not changed.
-(rerunfilecheck)             Checksum: F5FEF1AC9792745E6D293A137CBCB810;922.
+(rerunfilecheck)             Checksum: 4F96128DFC6D26DED510D5F68E6EAE22;1881.
  ) 
 Here is how much of TeX's memory you used:
- 28557 strings out of 475591
- 614986 string characters out of 5777375
- 1935432 words of memory out of 5000000
- 49293 multiletter control sequences out of 15000+600000
- 566853 words of font info for 114 fonts, out of 8000000 for 9000
+ 28755 strings out of 475591
+ 618870 string characters out of 5777375
+ 1945432 words of memory out of 5000000
+ 49475 multiletter control sequences out of 15000+600000
+ 568616 words of font info for 130 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  128i,20n,123p,434b,815s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on pdf.pdf (10 pages).
+Output written on pdf.pdf (20 pages).

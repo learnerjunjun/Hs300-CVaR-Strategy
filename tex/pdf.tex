@@ -1,4 +1,4 @@
-\documentclass[CJK,aspectratio=169]{beamer}  %aspectratio控制页面的宽高比，16：9充满屏幕
+\documentclass[CJK,aspectratio=43]{beamer}  %aspectratio控制页面的宽高比，16：9充满屏幕
 \usepackage{xeCJK}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -123,7 +123,10 @@
 		\text{VaR}:\lambda_{\alpha}(w)=\text{inf}\{\lambda\in R;\varphi(w,\lambda) \geq \alpha \}
 		$$
 		$$
-		\text{CVaR}:\phi_{\alpha}(w)=E[L(w,R) \vert L(w,R) \geq VaR(w)]=\frac{1}{1-\alpha}\int_{L(w,R)\geq \lambda_{\alpha}(w)}L(w,R)P(R)dR
+		\text{CVaR}:\phi_{\alpha}(w)=E[L(w,R) \vert L(w,R) \geq VaR(w)]
+		$$
+		$$
+		=\frac{1}{1-\alpha}\int_{L(w,R)\geq \lambda_{\alpha}(w)}L(w,R)P(R)dR
 		$$
 	\end{itemize}
 	\end{frame}
@@ -139,7 +142,7 @@
 		\item Rockafellar 和 Uryasev 提出，当$P(R)$的解析式未知时，可以使用基于历史数据的情景分析法，产生情景矩阵，将多重积分转化为求和运算；
 		\item 假设有$m$种情况，可以取$N$种债券$m$个时期的收益率
 		$$
-		\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{T}[L(w,R_t)-\lambda]=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[-w^TR_t-\lambda]
+		\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
 		$$
 	\end{itemize}
 \end{frame}
@@ -175,32 +178,192 @@
 			\item \textbf{其他因子：}风险、交易量、评级、股东持股变化、技术指标；
 		\end{itemize}
 	\end{enumerate}
-	\begin{figure}
+	\begin{table}[htbp]
 		\centering
-		\includegraphics[width=1\linewidth]{pic/factors}
+		\resizebox{\textwidth}{!}{%
+		\begin{tabular}{|l|l|l|l|l|l|}
+			\toprule
+			\multicolumn{1}{|c|}{\textbf{财务因子}} & \multicolumn{1}{c|}{\textbf{成长因子}} & \multicolumn{1}{c|}{\textbf{市场因子}} & \multicolumn{1}{c|}{\textbf{风险因子}} & \multicolumn{1}{c|}{\textbf{技术指标}} & \multicolumn{1}{c|}{\textbf{其他因子}} \\
+			\midrule
+			ROE\_q & Sales\_G\_q & return\_1m & beta  & macd  & LN\_capital \\
+			\midrule
+			ROE\_ttm & Profit\_G\_q & return\_3m & std\_1m & dea   & HAlpha \\
+			\midrule
+			ROA\_q & OCF\_G\_q & return\_6m & std\_3m & dif   & grossprofitmargin\_q \\
+			\bottomrule
+		\end{tabular}%
+		}
+		\label{tab:factors}%
 		\caption{Factors}
-		\label{fig:factors}
-	\end{figure}
+	\end{table}%
 \end{frame}
 
 \subsection{代码实现框架}
-\begin{frame}{选股及预测收益率}
+\begin{frame}{选股及预测}
 	\begin{enumerate}
-	\item 选股
+	\item 打分法选股
 	\begin{itemize}
-		\item 沪深300名单内股票及指数月度收益数据
-		\item 时间范围2005.04(month85)至2021.12(month285)
+		\item 线性回归模型拟合训练集数据
+		\item 分别使用回归系数、信息系数、因子协方差法为因子分配权重
+		\item 根据不同股票的因子，得到分数较高的股票
 	\end{itemize}
-	\item 因子
+	\item 预测测试集收益率
 	\begin{itemize}
-		\item \textbf{财务因子：}利润能力、偿债能力、资产周转率、现金流；
-		\item \textbf{成长因子：}营收增长、利润增长、现金流增长；
-		\item \textbf{市场因子：}股价相关、市值因子、动量；
-		\item \textbf{其他因子：}风险、交易量、评级、股东持股变化、技术指标；
+		\item 使用PCA进行因子合成(Number of components based on Kaiser Criterion: 16)
+		\begin{figure}
+			\centering
+			\includegraphics[width=0.6\linewidth]{pic/scree_plot}
+			\caption{Scree Plot}
+			\label{fig:screeplot}
+		\end{figure}
+		\item 拟合训练集的数据，预测测试集数据
 	\end{itemize}
-\end{enumerate}
+	\end{enumerate}
 \end{frame}
 
+\subsection{代码实现框架}
+\begin{frame}{优化问题重构}
+	\begin{enumerate}
+		\item 决策变量为 $weights$
+		\item 根据历史数据计算VaR
+		\begin{itemize}
+			\item 历史组合收益$ \text{Portfolio return} = Weights.T \times R $
+			\item 置信水平为 $\alpha=99\%$
+			\item 拟合组合收益的分布，取$1\%$处分位数为$VaR$值$=\lambda$
+		\end{itemize}
+		\item 加入预测数据计算CVaR(目标函数)
+		\begin{itemize}
+			\item 合并过去$40$个月历史数据，及预测的下$1$个月数据，形成新的数据集
+			\item 代入$m$，$\alpha$，$L(w,R_t)=-Weights.T \times R_t$，$\lambda$到之前的解析式中
+			$$
+			\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
+			$$
+		\end{itemize}
+	\end{enumerate}
+\end{frame}
+
+\subsection{代码实现框架}
+\begin{frame}{Rolling Window}
+	\begin{enumerate}
+		\item 投资目标是短期投资
+		\item 使用滚动训练的方法调整回归模型
+		\begin{itemize}
+			\item 训练集最少使用60个月的数据做训练
+			\item 测试集是训练集之后的6个月
+			\item 每6个月更新一次训练集及测试集
+		\end{itemize}
+		\item 调整每次选出来的股票
+		\begin{itemize}
+			\item 测试集中每个月都更新选股
+		\end{itemize}
+	\end{enumerate}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{回测思路}
+	\begin{enumerate}
+		\item 三种因子分配权重方法
+		\begin{itemize}
+			\item 按回归系数归一化配比
+			\item 按信息系数归一化配比
+			\item 按协方差矩阵的逆做配比
+		\end{itemize}
+		\item 两种最优权重求解方法
+		\begin{itemize}
+			\item Mean-Variance模型最小方差组合的权重
+			\item 使CVaR值最小的权重
+		\end{itemize}
+		\item 与沪深300指数的收益对比
+		\begin{itemize}
+			\item 分别将两个最优权重，带入当月的实际收益率，计算组合收益
+			\item 将组合的收益与沪深300指数的收益对比
+		\end{itemize}
+	\end{enumerate}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略收益表现-Coef}
+	\begin{itemize}
+		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
+		\item MV策略总体优于CVaR
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{pic/Coef}
+		\caption{Return and Compound Value}
+		\label{fig:coef}
+	\end{figure}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略回撤-Coef}
+	\begin{itemize}
+		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
+		\item MV策略总体优于CVaR
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{"pic/Coef_dramdown"}
+		\caption{}
+		\label{fig:coefdramdown}
+	\end{figure}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略收益表现-IC}
+	\begin{itemize}
+		\item 总体上基本可以跑赢指数； 
+		\item MV策略与CVaR策略接近
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{pic/IC}
+		\caption{Return and Compound Value}
+		\label{fig:ic}
+	\end{figure}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略回撤-IC}
+	\begin{itemize}
+		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
+		\item MV策略总体优于CVaR
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{"pic/IC_dramdown"}
+		\caption{}
+		\label{fig:icdramdown}
+	\end{figure}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略收益表现-Corr}
+	\begin{itemize}
+	\item 总体上大幅跑赢指数； 
+	\item CVaR策略逐步优于MV策略
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{pic/Corr}
+		\caption{Return and Compound Value}
+		\label{fig:corr}
+	\end{figure}
+\end{frame}
+
+\subsection{策略回测}
+\begin{frame}{策略回撤-Corr}
+	\begin{itemize}
+		\item 10年期收益及累计收益； 总体暂时没有稳定跑赢指数； 
+		\item MV策略总体优于CVaR
+	\end{itemize}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.8\linewidth]{"pic/Corr_dramdown"}
+		\caption{}
+		\label{fig:corrdramdown}
+	\end{figure}
+\end{frame}
 
 \section{不足与改进}
 \begin{frame}{不足与改进}
