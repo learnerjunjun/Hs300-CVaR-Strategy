@@ -32,16 +32,14 @@
 \setbeamercolor{block body} {bg = uibgray}
 \setbeamercolor{block title}{fg = white,bg = uibred}
 \setbeamertemplate{caption}[numbered]
-\title{基于收益预测和CVaR约束的投资组合优化}
-\author{Jingsong Yuan}
+\title[投资组合优化]{基于收益预测和CVaR约束的投资组合优化}
+\author{袁靖松}
+\institute{金融数学专题展示}
 \centering
-\date{November 2023}
+\date{2023.12}
 \begin{document}
 	% 一般第一页显示PPT标题以及作者信息
 	\begin{frame}
-		\title{基于收益预测和CVaR约束的投资组合优化}
-		\author{Jingsong Yuan} % 显示作者
-		\date{2023.11}  % 显示日期
 		\titlepage
 	\end{frame}
 	\begin{frame}{Outline}
@@ -170,7 +168,7 @@
 			\item 沪深300名单内股票及指数月度收益数据
 			\item 时间范围2005.04(month85)至2021.12(month285)
 		\end{itemize}
-		\item 因子
+		\item 部分因子
 		\begin{itemize}
 			\item \textbf{财务因子：}利润能力、偿债能力、资产周转率、现金流；
 			\item \textbf{成长因子：}营收增长、利润增长、现金流增长；
@@ -249,14 +247,20 @@
 		\item 使用滚动训练的方法调整回归模型
 		\begin{itemize}
 			\item 训练集最少使用60个月的数据做训练
-			\item 测试集是训练集之后的6个月
-			\item 每6个月更新一次训练集及测试集
+			\item 测试集是训练集之后的3个月
+			\item 每3个月更新一次训练集及测试集
 		\end{itemize}
 		\item 调整每次选出来的股票
 		\begin{itemize}
 			\item 测试集中每个月都更新选股
 		\end{itemize}
 	\end{enumerate}
+	\begin{figure}
+		\centering
+		\includegraphics[width=1\linewidth]{pic/framework}
+		\caption{Framework}
+		\label{fig:framework}
+	\end{figure}
 \end{frame}
 
 \subsection{策略回测}
@@ -365,14 +369,14 @@
 	\end{figure}
 \end{frame}
 
-\section{不足与改进}
-\begin{frame}{不足与改进}
+\section{结论与不足}
+\subsection{结论}
+\begin{frame}{小结}
 	\begin{enumerate}
 	\item 理论端
 		\begin{itemize}
 			\item 考虑交易成本
 		\end{itemize}
-		
 	\item  预测端
 		\begin{itemize}
 			\item 尝试更多ML/DNN方法
@@ -380,12 +384,43 @@
 	\item  策略端
 		\begin{itemize}
 			\item 改进滚动及调仓周期
+			\item 改进因子配比方法
 		\end{itemize}
 	\item  数据端
 		\begin{itemize}
 			\item 使用更高频数据
 		\end{itemize}
 	\item  求解方法
+		\begin{itemize}
+			\item 松弛线性规划（LP）
+			\item 次梯度算法（SA）
+			\item 遗传算法（GA）
+			\item 光滑化方法（SM）
+		\end{itemize}
+	\end{enumerate}
+\end{frame}
+
+\subsection{不足与改进}
+\begin{frame}{不足与改进}
+	\begin{enumerate}
+		\item 理论端
+		\begin{itemize}
+			\item 考虑交易成本
+		\end{itemize}
+		\item  预测端
+		\begin{itemize}
+			\item 尝试更多ML/DNN方法
+		\end{itemize}
+		\item  策略端
+		\begin{itemize}
+			\item 改进滚动及调仓周期
+			\item 改进因子配比方法
+		\end{itemize}
+		\item  数据端
+		\begin{itemize}
+			\item 使用更高频数据
+		\end{itemize}
+		\item  求解方法
 		\begin{itemize}
 			\item 松弛线性规划（LP）
 			\item 次梯度算法（SA）

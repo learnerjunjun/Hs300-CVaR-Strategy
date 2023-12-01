@@ -79,11 +79,17 @@
 \headcommand {\beamer@framepages {19}{19}}
 \headcommand {\beamer@sectionpages {9}{19}}
 \headcommand {\beamer@subsectionpages {19}{19}}
-\headcommand {\sectionentry {4}{不足与改进}{20}{不足与改进}{0}}
-\headcommand {\slideentry {4}{0}{1}{20/20}{}{0}}
+\headcommand {\sectionentry {4}{结论与不足}{20}{结论与不足}{0}}
+\headcommand {\beamer@subsectionpages {20}{19}}
+\headcommand {\beamer@subsectionentry {0}{4}{1}{20}{结论}}
+\headcommand {\slideentry {4}{1}{1}{20/20}{结论}{0}}
 \headcommand {\beamer@framepages {20}{20}}
-\headcommand {\beamer@partpages {1}{20}}
 \headcommand {\beamer@subsectionpages {20}{20}}
-\headcommand {\beamer@sectionpages {20}{20}}
-\headcommand {\beamer@documentpages {20}}
-\headcommand {\gdef \inserttotalframenumber {20}}
+\headcommand {\beamer@subsectionentry {0}{4}{2}{21}{不足与改进}}
+\headcommand {\slideentry {4}{2}{1}{21/21}{不足与改进}{0}}
+\headcommand {\beamer@framepages {21}{21}}
+\headcommand {\beamer@partpages {1}{21}}
+\headcommand {\beamer@subsectionpages {21}{21}}
+\headcommand {\beamer@sectionpages {20}{21}}
+\headcommand {\beamer@documentpages {21}}
+\headcommand {\gdef \inserttotalframenumber {21}}

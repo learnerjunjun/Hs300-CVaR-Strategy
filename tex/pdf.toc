@@ -18,4 +18,6 @@
 \beamer@subsectionintoc {3}{8}{策略回测}{17}{0}{3}
 \beamer@subsectionintoc {3}{9}{策略回测}{18}{0}{3}
 \beamer@subsectionintoc {3}{10}{策略回测}{19}{0}{3}
-\beamer@sectionintoc {4}{不足与改进}{20}{0}{4}
+\beamer@sectionintoc {4}{结论与不足}{20}{0}{4}
+\beamer@subsectionintoc {4}{1}{结论}{20}{0}{4}
+\beamer@subsectionintoc {4}{2}{不足与改进}{21}{0}{4}

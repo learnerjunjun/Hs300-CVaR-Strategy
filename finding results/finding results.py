@@ -33,7 +33,7 @@ class Para():
     n_stock = 5166
 para = Para()
 
-train_data_min_months = 72  # 每次模型训练所用数据最少不低于
+train_data_min_months = 60  # 每次模型训练所用数据最少不低于
 train_data_max_months = 108  # 每次模型训练所用数据最大不超过
 train_update_months = 3  # 设置更新周期
 start_date = 85  # 第一次滚动训练开始日期
@@ -401,25 +401,25 @@ while end_date <= 284:
         hs300_idxrtn = hs300_return.loc[hs300_return['month'] == i_month_1, 'Idxrtn'].item()
 
         # 将收益数据添加到DataFrame中
-        row_coef = {'month': i_month_1, 'return': portfolio_return_coef}
+        row_coef = {'month': i_month_1, 'return': portfolio_return_coef,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_coef = pd.concat([portfolio_return_data_coef, pd.DataFrame(row_coef, index=[0])],
                                                ignore_index=True)
-        row_ic = {'month': i_month_1, 'return': portfolio_return_ic}
+        row_ic = {'month': i_month_1, 'return': portfolio_return_ic,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_ic = pd.concat([portfolio_return_data_ic, pd.DataFrame(row_ic, index=[0])],
                                              ignore_index=True)
-        row_corr = {'month': i_month_1, 'return': portfolio_return_corr}
+        row_corr = {'month': i_month_1, 'return': portfolio_return_corr,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_corr = pd.concat([portfolio_return_data_corr, pd.DataFrame(row_corr, index=[0])],
                                                ignore_index=True)
-        row_cvar_coef = {'month': i_month_1, 'return': portfolio_return_cvar_coef}
+        row_cvar_coef = {'month': i_month_1, 'return': portfolio_return_cvar_coef,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_cvar_coef = pd.concat([portfolio_return_data_cvar_coef, pd.DataFrame(row_cvar_coef, index=[0])],
                                                ignore_index=True)
-        row_cvar_ic = {'month': i_month_1, 'return': portfolio_return_cvar_ic}
+        row_cvar_ic = {'month': i_month_1, 'return': portfolio_return_cvar_ic,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_cvar_ic = pd.concat([portfolio_return_data_cvar_ic, pd.DataFrame(row_cvar_ic, index=[0])],
                                                ignore_index=True)
-        row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr}
+        row_cvar_corr = {'month': i_month_1, 'return': portfolio_return_cvar_corr,'Month':data_for_score['month_details'].unique()}
         portfolio_return_data_cvar_corr = pd.concat([portfolio_return_data_cvar_corr, pd.DataFrame(row_cvar_corr, index=[0])],
                                                ignore_index=True)
-        row_hs300 = {'month': i_month_1, 'return': hs300_idxrtn}
+        row_hs300 = {'month': i_month_1, 'return': hs300_idxrtn,'Month':data_for_score['month_details'].unique()}
         return_data_hs300 = pd.concat([return_data_hs300, pd.DataFrame(row_hs300, index=[0])],
                                                ignore_index=True)
 
@@ -560,6 +560,9 @@ return_data_combined_corr['compound_value'] = (return_data_combined_corr['return
 return_data_combined_cvar_corr['compound_value'] = (return_data_combined_cvar_corr['return']+1).cumprod()
 return_data_combined_hs300['compound_value'] = (return_data_combined_hs300['return']+1).cumprod()
 
+#month_detail
+
+
 # 计算回撤
 def calculate_drawdown(data):
     data['peak_value'] = data['compound_value'].cummax()
@@ -617,19 +620,18 @@ results_df = pd.DataFrame(results)
 results_df.to_excel('evaluation results.xlsx', index=False)
 print(results_df)
 
-
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import seaborn as sns
 
 # 绘制回撤曲线并标注最大回撤
-# 绘制回撤曲线并标注最大回撤
 def plot_drawdown_with_max(data, column_name):
     data, max_drawdown = calculate_drawdown(data)
-    plt.plot(data['month'], data['drawdown'], label=column_name)
+    plt.plot(data['Month'], data['drawdown'], label=column_name)
     max_drawdown_index = data['drawdown'].idxmax()
     plt.annotate(f'Max DD: {max_drawdown:.2f}',
-                 xy=(data['month'][max_drawdown_index], data['drawdown'][max_drawdown_index]),
-                 xytext=(data['month'][max_drawdown_index], data['drawdown'][max_drawdown_index] + 0.1),
+                 xy=(data['Month'][max_drawdown_index], data['drawdown'][max_drawdown_index]),
+                 xytext=(data['Month'][max_drawdown_index], data['drawdown'][max_drawdown_index] - 0.1),  # 调整y轴位置
                  arrowprops=dict(facecolor='black', arrowstyle='->'))
 
 # 设置风格和配色方案
@@ -644,32 +646,36 @@ colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e3
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['return'], label='return_coef', color=colors[0])
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color=colors[1])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[2])
+plt.plot(return_data_combined_coef['Month'], return_data_combined_coef['return'], label='return_coef', color=colors[0])
+plt.plot(return_data_combined_cvar_coef['Month'], return_data_combined_cvar_coef['return'], label='return_var_coef', color=colors[1])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[2])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Coef')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_coef['month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color=colors[3])
-plt.plot(return_data_combined_cvar_coef['month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color=colors[4])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[5])
+plt.plot(return_data_combined_coef['Month'], return_data_combined_coef['compound_value'], label='compound_value_coef', color=colors[3])
+plt.plot(return_data_combined_cvar_coef['Month'], return_data_combined_cvar_coef['compound_value'], label='compound_value_var_coef', color=colors[4])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[5])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-
 plt.savefig('Coef.png', dpi=300)
 plt.tight_layout()
 plt.show()
 
 # 绘制三条回撤曲线在同一张图上
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 4))
 # 绘制回撤曲线
 plot_drawdown_with_max(return_data_combined_coef, 'return_data_combined_coef')
 plot_drawdown_with_max(return_data_combined_cvar_coef, 'return_data_combined_cvar_coef')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 限制y轴范围
+plt.ylim(0, 0.5)  # 调整y轴范围
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()
 plt.xlabel('Month')
@@ -682,18 +688,20 @@ plt.show()
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['return'], label='return_ic', color=colors[6])
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color=colors[7])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[8])
+plt.plot(return_data_combined_ic['Month'], return_data_combined_ic['return'], label='return_ic', color=colors[6])
+plt.plot(return_data_combined_cvar_ic['Month'], return_data_combined_cvar_ic['return'], label='return_var_ic', color=colors[7])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[8])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Ic')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_ic['month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color=colors[0])
-plt.plot(return_data_combined_cvar_ic['month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color=colors[1])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[2])
+plt.plot(return_data_combined_ic['Month'], return_data_combined_ic['compound_value'], label='compound_value_ic', color=colors[0])
+plt.plot(return_data_combined_cvar_ic['Month'], return_data_combined_cvar_ic['compound_value'], label='compound_value_var_ic', color=colors[1])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[2])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
@@ -703,11 +711,14 @@ plt.tight_layout()
 plt.show()
 
 # 绘制三条回撤曲线在同一张图上
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 4))
 # 绘制回撤曲线
 plot_drawdown_with_max(return_data_combined_ic, 'return_data_combined_ic')
 plot_drawdown_with_max(return_data_combined_cvar_ic, 'return_data_combined_cvar_ic')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 限制y轴范围
+plt.ylim(0, 0.5)  # 调整y轴范围
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()
 plt.xlabel('Month')
@@ -720,18 +731,20 @@ plt.show()
 plt.figure(figsize=(10, 8))
 
 plt.subplot(2, 1, 1)
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['return'], label='return_corr', color=colors[3])
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color=colors[4])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[5])
+plt.plot(return_data_combined_corr['Month'], return_data_combined_corr['return'], label='return_corr', color=colors[3])
+plt.plot(return_data_combined_cvar_corr['Month'], return_data_combined_cvar_corr['return'], label='return_var_corr', color=colors[4])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['return'], label='return_hs300', color=colors[5])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Return')
 plt.title('Return Data Combined Corr')
 
 plt.subplot(2, 1, 2)
-plt.plot(return_data_combined_corr['month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color=colors[6])
-plt.plot(return_data_combined_cvar_corr['month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color=colors[7])
-plt.plot(return_data_combined_hs300['month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[8])
+plt.plot(return_data_combined_corr['Month'], return_data_combined_corr['compound_value'], label='compound_value_corr', color=colors[6])
+plt.plot(return_data_combined_cvar_corr['Month'], return_data_combined_cvar_corr['compound_value'], label='compound_value_var_corr', color=colors[7])
+plt.plot(return_data_combined_hs300['Month'], return_data_combined_hs300['compound_value'], label='compound_value_hs300', color=colors[8])
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
@@ -741,11 +754,14 @@ plt.tight_layout()
 plt.show()
 
 # 绘制三条回撤曲线在同一张图上
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 4))
 # 绘制回撤曲线
 plot_drawdown_with_max(return_data_combined_corr, 'return_data_combined_corr')
 plot_drawdown_with_max(return_data_combined_cvar_corr, 'return_data_combined_cvar_corr')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
+# 限制y轴范围
+plt.ylim(0, 0.5)  # 调整y轴范围
+plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 # 配置图例、标签和标题
 plt.legend()
 plt.xlabel('Month')
