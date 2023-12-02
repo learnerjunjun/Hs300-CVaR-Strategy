@@ -292,17 +292,23 @@ while end_date <= 284:
     portfolio_return_data_cvar_ic = pd.DataFrame(columns=['month', 'return'])
     portfolio_return_data_cvar_corr = pd.DataFrame(columns=['month', 'return'])
     return_data_hs300 = pd.DataFrame(columns=['month', 'return'])
+    merged_data = pd.DataFrame()  # 创建一个空的 DataFrame 用于存储合并后的数据
+    # 读取 end_date 对应的数据
+    file_name_end_date = para.path_data + str(end_date) + '.csv'
+    data_end_date = pd.read_csv(file_name_end_date, header=0)
     for i_month_1 in period_test:
         # -- load
         file_name = para.path_data + str(i_month_1) + '.csv'
         data_curr_month = pd.read_csv(file_name, header=0)
+        # 合并数据
+        merged_data = pd.concat([merged_data, data_curr_month, data_end_date], axis=0)  # 假设要按行合并
         # -- remove nan
-        data_curr_month = data_curr_month.dropna(axis=0)
+        data_curr_month = merged_data.dropna(axis=0)
         # --hs300
         data_curr_month['code'] = data_curr_month['stock'].str.replace('[^\d]', '', regex=True)
         data_curr_month = pd.merge(hs300, data_curr_month, on=['code', 'month'], how='inner')
         # 打分法筛选出股票
-        data_for_score = data_curr_month[data_curr_month['month'] == i_month_1]
+        data_for_score = data_curr_month[data_curr_month['month'] == i_month_1-1]
         X_for_score = data_for_score.loc[:, 'EP':'bias']  # 提取数据
         y_curr_month = pd.DataFrame(
             {'month': data_for_score['month'], 'code': data_for_score['code'], 'curr_return': data_for_score['return']})
@@ -733,7 +739,7 @@ plot_drawdown_with_max(return_data_combined_ic, 'return_data_combined_ic')
 plot_drawdown_with_max(return_data_combined_cvar_ic, 'return_data_combined_cvar_ic')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(-0.01, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.6)  # 调整y轴范围
 # 设置日期显示的间隔和格式
 date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
 plt.xticks(ticks=plt.xticks()[0][::date_interval])

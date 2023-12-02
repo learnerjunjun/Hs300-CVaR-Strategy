@@ -11,6 +11,9 @@
 \usepackage[T1]{fontenc}     % 设置字体编码
 \usepackage{xcolor}    % 创建颜色和调整颜色
 \usepackage{listings}  % 排版代码和程序清单
+\usepackage{caption}
+\captionsetup[table]{skip=5pt} % 设置表格标题与内容之间的间距
+\captionsetup[figure]{skip=5pt} % 设置图片标题与内容之间的距离
 \usepackage{appendix}
 \setmainfont[Mapping=tex-text]{Times New Roman}%--------------------------------英文衬线字体
 \setsansfont[Mapping=tex-text]{Arial}%------------------------------------英文无衬线字体
@@ -52,7 +55,7 @@
 				\item Mean-Variance存在缺陷，模型建立在资产收益率服从正态分布等诸多限制性假设之上；均值作为期望收益与实际市场不符；低通滤波；不适于短期投资；
 			\begin{figure}
 				\centering
-				\includegraphics[width=0.9\linewidth]{"pic/distribution of random six"}
+				\includegraphics[width=1.04\linewidth]{"pic/distribution of random six"}
 				\caption{Distribution}
 				\label{fig:distribution-of-random-stock}
 			\end{figure}
@@ -202,7 +205,7 @@
 	\item 打分法选股
 	\begin{itemize}
 		\item 线性回归模型拟合训练集数据
-		\item 分别使用回归系数、信息系数、因子协方差法为因子分配权重
+		\item 使用回归系数、信息系数、因子协方差法为因子分配权重
 		\item 根据不同股票的因子，得到分数较高的股票
 	\end{itemize}
 	\item 预测测试集收益率
@@ -210,7 +213,7 @@
 		\item 使用PCA进行因子合成(Number of components based on Kaiser Criterion: 16)
 		\begin{figure}
 			\centering
-			\includegraphics[width=0.6\linewidth]{pic/scree_plot}
+			\includegraphics[width=0.58\linewidth]{pic/scree_plot}
 			\caption{Scree Plot}
 			\label{fig:screeplot}
 		\end{figure}
@@ -246,9 +249,10 @@
 		\item 投资目标是短期投资
 		\item 使用滚动训练的方法调整回归模型
 		\begin{itemize}
-			\item 训练集最少使用60个月的数据做训练
+			\item 训练集最少使用60个月的数据，最多不超过72个月
 			\item 测试集是训练集之后的3个月
 			\item 每3个月更新一次训练集及测试集
+			\item 测试集每个月轮动一次，持仓时间实际上是1个月
 		\end{itemize}
 		\item 调整每次选出来的股票
 		\begin{itemize}
@@ -257,7 +261,7 @@
 	\end{enumerate}
 	\begin{figure}
 		\centering
-		\includegraphics[width=1\linewidth]{pic/framework}
+		\includegraphics[width=0.95\linewidth]{pic/framework}
 		\caption{Framework}
 		\label{fig:framework}
 	\end{figure}
@@ -279,7 +283,7 @@
 		\end{itemize}
 		\item 与沪深300指数的收益对比
 		\begin{itemize}
-			\item 分别将两个最优权重，带入当月的实际收益率，计算组合收益
+			\item 将最优权重分别带入当月的实际收益率，计算组合收益
 			\item 将组合的收益与沪深300指数的收益对比
 		\end{itemize}
 	\end{enumerate}
@@ -288,12 +292,12 @@
 \subsection{策略回测}
 \begin{frame}{策略收益表现-Coef}
 	\begin{itemize}
-		\item 10年期收益及累计收益； 总体没有稳定明显地跑赢指数； 
-		\item CVaR策略总体优于MV策略
+		\item 没有稳定明显地跑赢指数,CVaR策略总体优于MV策略
+		\item 交易因子和财务因子，占比较大权重
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=1\linewidth]{pic/Coef}
+		\includegraphics[width=0.85\linewidth]{pic/Coef}
 		\caption{Return and Compound Value}
 		\label{fig:coef}
 	\end{figure}
@@ -302,7 +306,8 @@
 \subsection{策略回测}
 \begin{frame}{策略回撤-Coef}
 	\begin{itemize}
-		\item 两种策略最大回撤在 $30\%-40\%$，总体上回撤幅度低于指数
+		\item 两种策略最大回撤在 $20\%-30\%$，总体上回撤幅度低于指数
+		\item 大幅回撤发生在2020年5月份之后
 	\end{itemize}
 	\begin{figure}
 		\centering
@@ -315,12 +320,12 @@
 \subsection{策略回测}
 \begin{frame}{策略收益表现-IC}
 	\begin{itemize}
-		\item 总体上完全可以跑赢指数； 
-		\item CVaR策略完全优于MV策略
+		\item 总体上完全可以跑赢指数，CVaR策略完全优于MV策略；
+		\item 2015年股市异常波动，高杠杆场外配资是股市异常波动主要原因；2020年年初，选股策略失效，可能是受疫情影响；
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=1\linewidth]{pic/IC}
+		\includegraphics[width=0.79\linewidth]{pic/IC}
 		\caption{Return and Compound Value}
 		\label{fig:ic}
 	\end{figure}
@@ -329,7 +334,8 @@
 \subsection{策略回测}
 \begin{frame}{策略回撤-IC}
 	\begin{itemize}
-		\item 在2020.05之后，回撤幅度大幅增加
+		\item 在2019年末及2020年初，回撤幅度大幅增加
+		\item 财务因子及股价因子，占较大权重
 	\end{itemize}
 	\begin{figure}
 		\centering
@@ -342,12 +348,12 @@
 \subsection{策略回测}
 \begin{frame}{策略收益表现-Corr}
 	\begin{itemize}
-	\item 总体上大幅跑赢指数； 
-	\item CVaR策略逐步优于MV策略
+	\item 总体上大幅跑赢指数，CVaR策略逐步优于MV策略；
+	\item 2015年异常波动；2019年年初异常波动，处于18年以来衰退末期，风险偏好回升，估值修复；
 	\end{itemize}
 	\begin{figure}
 		\centering
-		\includegraphics[width=1\linewidth]{pic/Corr}
+		\includegraphics[width=0.79\linewidth]{pic/Corr}
 		\caption{Return and Compound Value}
 		\label{fig:corr}
 	\end{figure}
@@ -357,6 +363,7 @@
 \begin{frame}{策略回撤-Corr}
 	\begin{itemize}
 		\item 总体上回撤幅度较小
+		\item 股价及增长率因子占比为主，不重视技术及情绪因子
 	\end{itemize}
 	\begin{figure}
 		\centering
@@ -369,30 +376,30 @@
 \subsection{策略评价}
 \begin{frame}{策略对比评价}
 	\begin{itemize}
-		\item CVaR策略基本优于MV策略；
+		\item CVaR策略基本优于MV策略
 		\item 使用Corr方法选股+CVaR策略最优
 	\end{itemize}
 	\begin{table}[htbp]
 		\centering
 		\resizebox{\textwidth}{!}{%
-		\begin{tabular}{|c|c|c|c|c|c|}
-			\toprule
-			\textbf{Strategy} & \textbf{最大回撤} & \textbf{夏普比率} & \textbf{信息比率} & \textbf{年化收益率} & \textbf{收益回撤比} \\
-			\midrule
-			Coef  & 0.398 & 0.648 & -0.767 & 1.877\% & 4.720\% \\
-			\midrule
-			Cvar\_coef & 0.321 & 1.377 & -0.428 & 4.117\% & 12.844\% \\
-			\midrule
-			Ic    & 0.364 & 1.497 & -0.403 & 4.354\% & 11.961\% \\
-			\midrule
-			Cvar\_ic & 0.520 & 1.644 & -0.160 & 5.812\% & 11.179\% \\
-			\midrule
-			Corr  & 0.197 & 3.151 & 0.486 & 9.886\% & 50.094\% \\
-			\midrule
-			Cvar\_corr & 0.156 & 2.907 & 0.919 & 13.101\% & 84.249\% \\
-			\midrule
-			hs300 & 0.406 & 1.336 & 0.000 & 6.845\% & 16.877\% \\
-			\bottomrule
+	    \begin{tabular}{|c|c|c|c|c|c|}
+		\toprule
+		\textbf{策略} & \textbf{最大回撤} & \textbf{夏普比率} & \textbf{信息比率} & \textbf{年化收益率} & \textbf{收益回撤比} \\
+		\midrule
+		Coef  & 29.901\% & 1.272 & -0.556 & 3.450\% & 11.538\% \\
+		\midrule
+		CVaR\_coef & 26.713\% & 1.510 & -0.309 & 4.867\% & 18.218\% \\
+		\midrule
+		Ic    & 28.526\% & 1.345 & -0.526 & 3.739\% & 13.108\% \\
+		\midrule
+		CVaR\_ic & 42.263\% & 1.395 & -0.484 & 4.025\% & 9.524\% \\
+		\midrule
+		Corr  & 17.969\% & 2.884 & 0.396 & 9.346\% & 52.009\% \\
+		\midrule
+		CVaR\_Corr & 16.723\% & 3.256 & 1.149 & 15.199\% & 90.889\% \\
+		\midrule
+		hs300 & 40.558\% & 1.336 & 0.000 & 6.845\% & 16.877\% \\
+		\bottomrule
 		\end{tabular}%
 		}
 		\caption{Strategy Comparison}
@@ -404,9 +411,15 @@
 \subsection{结论}
 \begin{frame}{小结}
 	\begin{enumerate}
-	\item 理论端
+	\item CVaR策略基本优于MV策略
 		\begin{itemize}
-			\item 考虑交易成本
+			\item CVaR对损失风险更加敏感
+			\item 收益更高，风险更小
+		\end{itemize}
+	\item 诸多影响条件
+		\begin{itemize}
+			\item 数据集划分、轮动周期
+			\item 选股方法及数量
 		\end{itemize}
 	\end{enumerate}
 \end{frame}
@@ -417,10 +430,11 @@
 		\item 理论端
 		\begin{itemize}
 			\item 考虑交易成本
+			\item 加入投资者观点
 		\end{itemize}
 		\item  预测端
 		\begin{itemize}
-			\item 尝试更多ML/DNN方法
+			\item 尝试更多ML/DNN方法选股及预测
 		\end{itemize}
 		\item  策略端
 		\begin{itemize}
@@ -431,7 +445,7 @@
 		\begin{itemize}
 			\item 使用更高频数据
 		\end{itemize}
-		\item  求解方法
+		\item  CVaR多重积分求解方法
 		\begin{itemize}
 			\item 松弛线性规划（LP）
 			\item 次梯度算法（SA）
