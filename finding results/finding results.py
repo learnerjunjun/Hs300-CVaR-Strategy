@@ -386,7 +386,7 @@ while end_date <= 284:
         portfolio_weights_ic = calculate_portfolio_weights(mean_returns_ic, cov_matrix_ic)
         portfolio_weights_corr = calculate_portfolio_weights(mean_returns_corr, cov_matrix_corr)
         
-        # 使用CVaR计算最优方差
+        # 使用CVaR计算最优权重
         confidence_level = 0.99
         returns_cvar_coef = top_select_stocks_return_coef
         returns_cvar_ic = top_select_stocks_return_ic
@@ -431,24 +431,21 @@ while end_date <= 284:
                                                ignore_index=True)
 
         # 使用NaN将数据补齐至长度为max_select
+        stock_codes_coef = np.concatenate((stock_codes_coef, np.full(max_select - len(stock_codes_coef), np.nan)))
+        stock_codes_ic = np.concatenate((stock_codes_ic, np.full(max_select - len(stock_codes_ic), np.nan)))
+        stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
         portfolio_weights_coef = np.concatenate(
             (portfolio_weights_coef, np.full(max_select - len(portfolio_weights_coef), np.nan)))
-        stock_codes_coef = np.concatenate((stock_codes_coef, np.full(max_select - len(stock_codes_coef), np.nan)))
         portfolio_weights_ic = np.concatenate(
             (portfolio_weights_ic, np.full(max_select - len(portfolio_weights_ic), np.nan)))
-        stock_codes_ic = np.concatenate((stock_codes_ic, np.full(max_select - len(stock_codes_ic), np.nan)))
         portfolio_weights_corr = np.concatenate(
             (portfolio_weights_corr, np.full(max_select - len(portfolio_weights_corr), np.nan)))
-        stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
         portfolio_weights_cvar_coef = np.concatenate(
             (portfolio_weights_cvar_coef, np.full(max_select - len(portfolio_weights_cvar_coef), np.nan)))
-        stock_codes_corr = np.concatenate((stock_codes_coef, np.full(max_select - len(stock_codes_coef), np.nan)))
         portfolio_weights_cvar_ic = np.concatenate(
             (portfolio_weights_cvar_ic, np.full(max_select - len(portfolio_weights_cvar_ic), np.nan)))
-        stock_codes_corr = np.concatenate((stock_codes_ic, np.full(max_select - len(stock_codes_ic), np.nan)))
         portfolio_weights_cvar_corr = np.concatenate(
             (portfolio_weights_cvar_corr, np.full(max_select - len(portfolio_weights_cvar_corr), np.nan)))
-        stock_codes_corr = np.concatenate((stock_codes_corr, np.full(max_select - len(stock_codes_corr), np.nan)))
 
         # 将最优投资组合权重和股票代码添加到DataFrame中
         portfolio_weights_df_coef[str(i_month_1) + '_code'] = stock_codes_coef
