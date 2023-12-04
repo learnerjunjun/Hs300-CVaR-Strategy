@@ -75,6 +75,8 @@
 				\item 不依赖分布假设
 				\item 考虑分布的尾部，更好处理异常值
 			\end{itemize}
+			\item 结合机器学习方法与现代组合优化理论
+			\cite{Tong2021}
 		\end{enumerate}
 	\end{frame}
 \section{理论模型}
@@ -132,7 +134,6 @@
 	\end{itemize}
 	\end{frame}
 
-\subsection{CVaR计算}
 \begin{frame}{CVaR计算}
 	\begin{itemize}
 		\item 利用Rockafellar和Uryasev同时计算$\text{VaR}$和$\text{CVaR}$的功能函数$F_{\alpha}(w,R)$有
@@ -145,26 +146,47 @@
 		$$
 		\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
 		$$
+		\cite{Rong2007}
 	\end{itemize}
 \end{frame}
 
 \subsection{优化问题建模}
 \begin{frame}{优化问题建模}
-	\begin{itemize}
-		\item 目标函数 \\
-		$
-		\text{min}_{w} \ \lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[-w^TR_t-\lambda]
-		$
-		\item 决策变量: $w$
-		\item 约束条件 \\
-		$
-		\text{s.t.} \ w^TI=1
-		$
-	\end{itemize}
+	\begin{enumerate}
+	\item CVaR最小化
+		\begin{itemize}	
+			\item 目标函数(决策变量: $w$)  \\
+			$$
+			\text{min}_{w} \ \lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[-w^TR_t-\lambda]
+			$$
+			\item 约束条件 \\
+			$$
+			\text{s.t.} \ w^TI=1
+			$$
+			$$
+			w \geq 0
+			$$
+		\end{itemize}
+	\item 方差最小化
+		\begin{itemize}	
+			\item 目标函数(决策变量: $w$) \\
+			$$
+			\text{min}_{w} \ w^T\Sigma w
+			$$
+			\item 约束条件 \\
+			$$
+			\text{s.t.} \ w^TI=1
+			$$
+			$$
+			w \geq 0
+			$$
+		\end{itemize}
+	\end{enumerate}
 \end{frame}
 
 \section{数据实验}
-\begin{frame}{数据实验}
+\subsection{数据及因子}
+\begin{frame}{数据及因子}
 	\begin{enumerate}
 		\item 历史数据
 		\begin{itemize}
@@ -199,7 +221,7 @@
 	\end{table}%
 \end{frame}
 
-\subsection{代码实现框架}
+\subsection{选股及预测}
 \begin{frame}{选股及预测}
 	\begin{enumerate}
 	\item 打分法选股
@@ -222,7 +244,7 @@
 	\end{enumerate}
 \end{frame}
 
-\subsection{代码实现框架}
+\subsection{优化问题重构}
 \begin{frame}{优化问题重构}
 	\begin{enumerate}
 		\item 决策变量为 $weights$
@@ -243,20 +265,17 @@
 	\end{enumerate}
 \end{frame}
 
-\subsection{代码实现框架}
+\subsection{Rolling Window}
 \begin{frame}{Rolling Window}
 	\begin{enumerate}
 		\item 投资目标是短期投资
-		\item 使用滚动训练的方法调整回归模型
+		\item 使用滚动训练的方法调整
 		\begin{itemize}
-			\item 训练集最少使用60个月的数据，最多不超过72个月
+			\item 训练集最少使用60个月的数据，最多不超过84个月
 			\item 测试集是训练集之后的3个月
 			\item 每3个月更新一次训练集及测试集
 			\item 测试集每个月轮动一次，持仓时间实际上是1个月
-		\end{itemize}
-		\item 调整每次选出来的股票
-		\begin{itemize}
-			\item 测试集中每个月都更新选股
+			\item 测试集使用上一个月的因子数据，结合打分法选出下一个月的股票(避免未来函数)
 		\end{itemize}
 	\end{enumerate}
 	\begin{figure}
@@ -267,7 +286,7 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
+\subsection{回测}
 \begin{frame}{回测思路}
 	\begin{enumerate}
 		\item 三种因子分配权重方法
@@ -283,17 +302,17 @@
 		\end{itemize}
 		\item 与沪深300指数的收益对比
 		\begin{itemize}
-			\item 将最优权重分别带入当月的实际收益率，计算组合收益
+			\item 将最优权重分别代入当月的实际收益率，计算组合收益
 			\item 将组合的收益与沪深300指数的收益对比
 		\end{itemize}
 	\end{enumerate}
 \end{frame}
 
-\subsection{策略回测}
+\subsection{Coef}
 \begin{frame}{策略收益表现-Coef}
 	\begin{itemize}
-		\item 没有稳定明显地跑赢指数,CVaR策略总体优于MV策略
-		\item 交易因子和财务因子，占比较大权重
+		\item 没有稳定明显地跑赢指数,CVaR策略小幅度优于MV策略
+		\item 交易因子和财务因子，占较大权重
 	\end{itemize}
 	\begin{figure}
 		\centering
@@ -303,7 +322,6 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
 \begin{frame}{策略回撤-Coef}
 	\begin{itemize}
 		\item 两种策略最大回撤在 $20\%-30\%$，总体上回撤幅度低于指数
@@ -317,7 +335,7 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
+\subsection{IC}
 \begin{frame}{策略收益表现-IC}
 	\begin{itemize}
 		\item 总体上完全可以跑赢指数，CVaR策略完全优于MV策略；
@@ -331,7 +349,6 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
 \begin{frame}{策略回撤-IC}
 	\begin{itemize}
 		\item 在2019年末及2020年初，回撤幅度大幅增加
@@ -345,7 +362,7 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
+\subsection{Corr}
 \begin{frame}{策略收益表现-Corr}
 	\begin{itemize}
 	\item 总体上大幅跑赢指数，CVaR策略逐步优于MV策略；
@@ -359,11 +376,11 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略回测}
 \begin{frame}{策略回撤-Corr}
 	\begin{itemize}
 		\item 总体上回撤幅度较小
-		\item 股价及增长率因子占比为主，不重视技术及情绪因子
+		\item 股价及增长率因子占比为主，重视技术及情绪因子
+		\item 疫情之后，传统的成长，动量等因子逐渐失效，估值，盈利，杠杆，非线性市值等因子表现突出
 	\end{itemize}
 	\begin{figure}
 		\centering
@@ -373,11 +390,11 @@
 	\end{figure}
 \end{frame}
 
-\subsection{策略评价}
-\begin{frame}{策略对比评价}
+\subsection{策略对比}
+\begin{frame}{策略对比}
 	\begin{itemize}
-		\item CVaR策略基本优于MV策略
-		\item 使用Corr方法选股+CVaR策略最优
+		\item CVaR策略基本优于MV策略，使用Corr方法选股+CVaR策略最优
+		\item 10年期平均年化收益率 $15\%$
 	\end{itemize}
 	\begin{table}[htbp]
 		\centering
@@ -411,48 +428,126 @@
 \subsection{结论}
 \begin{frame}{小结}
 	\begin{enumerate}
-	\item CVaR策略基本优于MV策略
+	\item CVaR策略具有一定可行性
 		\begin{itemize}
-			\item CVaR对损失风险更加敏感
-			\item 收益更高，风险更小
+			\item 投资组合的权重决策，基本优于MV最小方差策略
+			\item CVaR对损失风险更加敏感，投资组合的波动性更小
+			\item 一定程度避免了人为模型设定误差和参数估计误差
+			\item 同时获取超额收益的能力具有一定保障
 		\end{itemize}
-	\item 诸多影响条件
+	\item CVaR策略的有效性受到诸多条件的影响
 		\begin{itemize}
 			\item 数据集划分、轮动周期
-			\item 选股方法及数量
+			\item 因子的数量及有效性
+			\item 选股方法及选股数量
 		\end{itemize}
 	\end{enumerate}
 \end{frame}
 
 \subsection{不足与改进}
-\begin{frame}{不足与改进}
+\begin{frame}{不足}
 	\begin{enumerate}
-		\item 理论端
+		\item 数据量小
 		\begin{itemize}
-			\item 考虑交易成本
-			\item 加入投资者观点
+			\item 只筛选出了沪深300的股票，整体的数据量较低
+			\item 需要较多的历史数据才能拟合的比较精准
+			\item 但历史数据的有效样本略微不足
+			\item 月度数据，策略实效性较低
 		\end{itemize}
-		\item  预测端
+			\item  历史数据选取时段缺乏标准(40个月)
 		\begin{itemize}
-			\item 尝试更多ML/DNN方法选股及预测
+			\item 过去时段过短，样本量少，反映尾部分布特征的样本较少
+			\item 过去时段过长，样本量过多，收益率分布函数可能变化，无法反映先期收益率的分布特征
 		\end{itemize}
-		\item  策略端
+		\item  没有考虑投资者观点
 		\begin{itemize}
-			\item 改进滚动及调仓周期
-			\item 改进因子配比方法
-		\end{itemize}
-		\item  数据端
-		\begin{itemize}
-			\item 使用更高频数据
-		\end{itemize}
-		\item  CVaR多重积分求解方法
-		\begin{itemize}
-			\item 松弛线性规划（LP）
-			\item 次梯度算法（SA）
-			\item 遗传算法（GA）
-			\item 光滑化方法（SM）
+			\item 只考虑了风险指标
+			\item 缺少对资产预期收益率的观点
+			\item 只适合极端风险厌恶的投资者
+			\item 理想的模型应该是权衡收益与风险的
 		\end{itemize}
 	\end{enumerate}
 \end{frame}
 
+\subsection{不足与改进}
+\begin{frame}{针对CVaR策略的改进方向}
+	\begin{enumerate}
+		\item 改进目标函数的估计方法
+		\begin{itemize}
+			\item $F_{\alpha}(w,\lambda)=\lambda+\frac{1}{1-\alpha}\int_{R\in R^N}[L(w,R)-\lambda]^{+}P(R)dR$
+			\item 目标函数中包含极大值函数，是非光滑凸规划问题
+			\item 考虑使用非参数核估计方法
+			\cite{Huang2014}
+		\end{itemize}
+		\item 改进约束条件
+		\begin{itemize}
+			\item 考虑交易成本
+			\item 加入投资者观点，如定价误差参数、预期收益率等 $w^TR\geq \pi$
+			\item 梯度计算公式+迫近束求解
+			\cite{Huang2022}
+		\end{itemize}
+		\item  改进代码实现方法
+		\begin{itemize}
+			\item 尝试更多ML/DNN方法选股及预测
+			\item 改进滚动及调仓周期
+			\item 改进因子配比方法
+			\item 使用更高频数据
+		\end{itemize}
+	\end{enumerate}
+\end{frame}
+
+\section{附录}
+\subsection{因子权重}
+\begin{frame}{因子权重}
+	\begin{enumerate}
+		\item 三种方法对应的因子权重
+		\begin{table}[htbp]
+			\centering
+			\resizebox{\textwidth}{!}{%
+			\begin{tabular}{|c|c|c|c|c|c|}
+				\toprule
+				\multicolumn{2}{|c|}{\textbf{Coef}} & \multicolumn{2}{c|}{\textbf{IC}} & \multicolumn{2}{c|}{\textbf{Corr}} \\
+				\midrule
+				\textbf{Factors} & \textbf{Weights} & \textbf{Factors} & \textbf{Weights} & \textbf{Factors} & \textbf{Weights} \\
+				\midrule
+				turn\_6m & 0.11  & EP    & 0.07  & EP    & 0.18 \\
+				\midrule
+				exp\_wgt\_return\_12m & 0.06  & EPcut & 0.06  & EPcut & 0.14 \\
+				\midrule
+				turn\_12m & 0.05  & ROE\_ttm & 0.06  & BP    & 0.10 \\
+				\midrule
+				bias\_turn\_6m & 0.04  & Profit\_G\_q & 0.06  & SP    & 0.09 \\
+				\midrule
+				exp\_wgt\_return\_1m & 0.03  & ROE\_q & 0.05  & NCFP  & 0.07 \\
+				\midrule
+				turn\_3m & 0.03  & OCFP  & 0.05  & OCFP  & 0.07 \\
+				\midrule
+				exp\_wgt\_return\_6m & 0.03  & ROE\_G\_q & 0.04  & DP    & 0.06 \\
+				\midrule
+				return\_1m & 0.03  & SP    & 0.04  & G/PE  & 0.06 \\
+				\midrule
+				std\_6m & 0.03  & DP    & 0.04  & Sales\_G\_q & 0.06 \\
+				\midrule
+				std\_1m & 0.03  & ROA\_ttm & 0.03  & Profit\_G\_q & 0.05 \\
+				\bottomrule
+			\end{tabular}%
+			}
+			\caption{Weights of Factors}
+			\label{tab:addlabel}%
+		\end{table}%
+	\end{enumerate}
+\end{frame}
+
+\subsection{参考文献}
+	\begin{frame}{参考文献}
+		\bibliographystyle{plain}
+		\bibliography{references}
+	\end{frame}
+\subsection{Ending}
+% 自定义结束页
+\begin{frame}
+	\begin{center}
+		\Huge\textbf{Thank You!}
+	\end{center}
+\end{frame}
 \end{document}

@@ -1,3 +1,5 @@
+#TO-do
+#不筛选hs300，直接使用所有A股的数据
 # 导入包
 import numpy as np
 import pandas as pd
@@ -34,8 +36,8 @@ class Para():
     n_stock = 5166
 para = Para()
 
-train_data_min_months = 60  # 每次模型训练所用数据最少不低于
-train_data_max_months = 84  # 每次模型训练所用数据最大不超过
+train_data_min_months = 54  # 每次模型训练所用数据最少不低于
+train_data_max_months = 78  # 每次模型训练所用数据最大不超过
 train_update_months = 3  # 设置更新周期
 start_date = 85  # 第一次滚动训练开始日期
 end_date = start_date + train_data_min_months  # 第一次滚动训练结束日期
@@ -465,17 +467,17 @@ while end_date <= 284:
         portfolio_weights_df_cvar_corr[str(i_month_1)] = portfolio_weights_cvar_corr
 
     return_data_combined_coef = pd.concat([return_data_combined_coef, portfolio_return_data_coef], ignore_index=True)
-    weights_data_combined_coef = pd.concat([weights_data_combined_coef, portfolio_weights_df_coef], ignore_index=True,axis=1)
+    weights_data_combined_coef = pd.concat([weights_data_combined_coef, portfolio_weights_df_coef], ignore_index=True)
     return_data_combined_ic = pd.concat([return_data_combined_ic, portfolio_return_data_ic], ignore_index=True)
-    weights_data_combined_ic = pd.concat([weights_data_combined_ic, portfolio_weights_df_ic], ignore_index=True,axis=1)
+    weights_data_combined_ic = pd.concat([weights_data_combined_ic, portfolio_weights_df_ic], ignore_index=True)
     return_data_combined_corr = pd.concat([return_data_combined_corr, portfolio_return_data_corr], ignore_index=True)
-    weights_data_combined_corr = pd.concat([weights_data_combined_corr, portfolio_weights_df_corr], ignore_index=True,axis=1)
+    weights_data_combined_corr = pd.concat([weights_data_combined_corr, portfolio_weights_df_corr], ignore_index=True)
     return_data_combined_cvar_coef = pd.concat([return_data_combined_cvar_coef, portfolio_return_data_cvar_coef], ignore_index=True)
-    weights_data_combined_cvar_coef = pd.concat([weights_data_combined_cvar_coef, portfolio_weights_df_cvar_coef], ignore_index=True,axis=1)
+    weights_data_combined_cvar_coef = pd.concat([weights_data_combined_cvar_coef, portfolio_weights_df_cvar_coef], ignore_index=True)
     return_data_combined_cvar_ic = pd.concat([return_data_combined_cvar_ic, portfolio_return_data_cvar_ic], ignore_index=True)
-    weights_data_combined_cvar_ic = pd.concat([weights_data_combined_cvar_ic, portfolio_weights_df_cvar_ic], ignore_index=True,axis=1)
+    weights_data_combined_cvar_ic = pd.concat([weights_data_combined_cvar_ic, portfolio_weights_df_cvar_ic], ignore_index=True)
     return_data_combined_cvar_corr = pd.concat([return_data_combined_cvar_corr, portfolio_return_data_cvar_corr], ignore_index=True)
-    weights_data_combined_cvar_corr = pd.concat([weights_data_combined_cvar_corr, portfolio_weights_df_cvar_corr], ignore_index=True,axis=1)
+    weights_data_combined_cvar_corr = pd.concat([weights_data_combined_cvar_corr, portfolio_weights_df_cvar_corr], ignore_index=True)
     return_data_combined_hs300 = pd.concat([return_data_combined_hs300 , return_data_hs300],ignore_index=True)
 
     # -- evaluation
@@ -864,8 +866,3 @@ weights_data_combined_cvar_corr.to_excel(writer, sheet_name='weights_data_combin
 return_data_combined_hs300.to_excel(writer, sheet_name='return_data_combined_hs300', index=False)
 # 保存Excel文件
 writer.close()
-
-#选的股票数量增加，表现并不好
-#min,max,reback均影响VaR和CVaR的拟合
-#收益率最佳的结果：min=60; max=80; reback=40; select=20;
-#策略对比不错的结果：min=54; max=78; reback=40; select=20;

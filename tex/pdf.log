@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  3 DEC 2023 00:20
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2023.9.4)  4 DEC 2023 17:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1093,7 +1093,11 @@ Package fontspec Info: Font family 'FandolHei-Regular(0)' created for font
 (fontspec)             <->"[FandolHei-Bold.otf]/OT:language=dflt;"
 (fontspec)             - 'bold small caps'  (b/sc) with NFSS spec.: 
 
-(./pdf.aux)
+(./pdf.aux
+
+LaTeX Warning: Label `tab:addlabel' multiply defined.
+
+)
 \openout1 = `pdf.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 43.
@@ -1337,12 +1341,12 @@ Overfull \vbox (16.62198pt too high) detected at line 63
 ] [4
 
 ]
-LaTeX Font Info:    Trying to load font information for U+msa on input line 108
+LaTeX Font Info:    Trying to load font information for U+msa on input line 110
 .
  (d:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 108
+LaTeX Font Info:    Trying to load font information for U+msb on input line 110
 .
 
 (d:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -1353,26 +1357,29 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 
 ] [7
 
-] [8
-
 ]
-[9
+Overfull \vbox (4.3444pt too high) detected at line 185
+ []
+
+[8
+
+] [9
 
 ]
 File: pic/scree_plot.png Graphic file (type bmp)
 <pic/scree_plot.png>
 
-Overfull \hbox (43.79999pt too wide) in paragraph at lines 223--223
+Overfull \hbox (43.79999pt too wide) in paragraph at lines 245--245
 [][]
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 223--223
+Underfull \hbox (badness 10000) in paragraph at lines 245--245
 
  []
 
 
-Overfull \vbox (27.74513pt too high) detected at line 223
+Overfull \vbox (27.74513pt too high) detected at line 245
  []
 
 [10
@@ -1383,7 +1390,7 @@ Overfull \vbox (27.74513pt too high) detected at line 223
 File: pic/framework.png Graphic file (type bmp)
 <pic/framework.png>
 
-Overfull \vbox (6.57816pt too high) detected at line 268
+Overfull \vbox (6.88264pt too high) detected at line 287
  []
 
 [12
@@ -1394,7 +1401,7 @@ Overfull \vbox (6.57816pt too high) detected at line 268
 File: pic/Coef.png Graphic file (type bmp)
 <pic/Coef.png>
 
-Overfull \vbox (7.0265pt too high) detected at line 304
+Overfull \vbox (7.0265pt too high) detected at line 323
  []
 
 [14
@@ -1408,7 +1415,7 @@ File: pic/Drawdown_Comparison_Coef.png Graphic file (type bmp)
 File: pic/IC.png Graphic file (type bmp)
 <pic/IC.png>
 
-Overfull \vbox (7.50711pt too high) detected at line 332
+Overfull \vbox (7.50711pt too high) detected at line 350
  []
 
 [16
@@ -1422,7 +1429,7 @@ File: pic/Drawdown_Comparison_IC.png Graphic file (type bmp)
 File: pic/Corr.png Graphic file (type bmp)
 <pic/Corr.png>
 
-Overfull \vbox (9.62679pt too high) detected at line 360
+Overfull \vbox (9.62679pt too high) detected at line 377
  []
 
 [18
@@ -1437,6 +1444,50 @@ File: pic/Drawdown_Comparison_Corr.png Graphic file (type bmp)
 ] [21
 
 ] [22
+
+] [23
+
+]
+Overfull \hbox (21.90764pt too wide) in paragraph at lines 539--539
+ [] 
+ []
+
+
+Overfull \hbox (21.9pt too wide) in paragraph at lines 539--539
+[][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 539--539
+
+ []
+
+
+Overfull \vbox (16.20274pt too high) detected at line 539
+ []
+
+[24
+
+] (./pdf.bbl
+File: beamericonarticle.pdf Graphic file (type pdf)
+<use beamericonarticle.pdf>
+File: beamericonarticle.pdf Graphic file (type pdf)
+<use beamericonarticle.pdf>
+File: beamericonarticle.pdf Graphic file (type pdf)
+<use beamericonarticle.pdf>
+
+
+LaTeX Font Warning: Font shape `TU/FandolHei-Regular(0)/m/it' undefined
+(Font)              using `TU/FandolHei-Regular(0)/m/n' instead on input line 1
+2.
+
+File: beamericonarticle.pdf Graphic file (type pdf)
+<use beamericonarticle.pdf>
+File: beamericonarticle.pdf Graphic file (type pdf)
+<use beamericonarticle.pdf>
+) [25
+
+] [26
 
 ]
 \tf@nav=\write6
@@ -1453,16 +1504,23 @@ File: pic/Drawdown_Comparison_Corr.png Graphic file (type bmp)
 LaTeX2e <2023-06-01> patch level 1
 L3 programming layer <2022/08/05>
  ***********
+
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+
+LaTeX Warning: There were multiply-defined labels.
+
 Package rerunfilecheck Info: File `pdf.out' has not changed.
-(rerunfilecheck)             Checksum: 9D0F068B679664B8AA1AB760A92D7C31;2147.
+(rerunfilecheck)             Checksum: 5DE1AC212C33FE4691BB1DB15EEEEFD5;2261.
  ) 
 Here is how much of TeX's memory you used:
- 30134 strings out of 475591
- 646546 string characters out of 5777375
- 1946432 words of memory out of 5000000
- 50842 multiletter control sequences out of 15000+600000
- 568624 words of font info for 131 fonts, out of 8000000 for 9000
+ 30199 strings out of 475591
+ 647306 string characters out of 5777375
+ 1949432 words of memory out of 5000000
+ 50901 multiletter control sequences out of 15000+600000
+ 568648 words of font info for 134 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  128i,20n,123p,434b,873s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on pdf.pdf (22 pages).
+Output written on pdf.pdf (26 pages).
