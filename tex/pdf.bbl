@@ -1,5 +1,11 @@
 \begin{thebibliography}{1}
 
+\bibitem{Ma2020}
+Yilin Ma, Ruizhu Han, and Weizhong Wang.
+\newblock Prediction based portfolio optimization models using deep neural
+  networks.
+\newblock {\em IEEE Access}, 8:115393--115405, 2020.
+
 \bibitem{Tong2021}
 Li~Jia Tong, Jie Shen, and Na~Xu.
 \newblock An infeasible incremental bundle method for nonsmooth optimization

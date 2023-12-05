@@ -18,9 +18,7 @@
 \beamer@subsectionintoc {3}{9}{策略对比}{20}{0}{3}
 \beamer@sectionintoc {4}{结论与不足}{21}{0}{4}
 \beamer@subsectionintoc {4}{1}{结论}{21}{0}{4}
-\beamer@subsectionintoc {4}{2}{不足与改进}{22}{0}{4}
-\beamer@subsectionintoc {4}{3}{不足与改进}{23}{0}{4}
-\beamer@sectionintoc {5}{附录}{24}{0}{5}
-\beamer@subsectionintoc {5}{1}{因子权重}{24}{0}{5}
-\beamer@subsectionintoc {5}{2}{参考文献}{25}{0}{5}
-\beamer@subsectionintoc {5}{3}{Ending}{26}{0}{5}
+\beamer@subsectionintoc {4}{2}{不足}{22}{0}{4}
+\beamer@subsectionintoc {4}{3}{改进}{23}{0}{4}
+\beamer@sectionintoc {5}{因子权重}{24}{1}{5}
+\beamer@sectionintoc {6}{参考文献}{25}{1}{6}

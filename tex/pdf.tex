@@ -75,8 +75,7 @@
 				\item 不依赖分布假设
 				\item 考虑分布的尾部，更好处理异常值
 			\end{itemize}
-			\item 结合机器学习方法与现代投资组合优化理论
-			\cite{Tong2021}
+			\item 结合机器学习方法与现代投资组合优化理论~\cite{Ma2020}
 		\end{enumerate}
 	\end{frame}
 \section{理论模型}
@@ -142,11 +141,10 @@
 		$$
 		其中，$\lambda$即$\text{VaR}$值，$[0,x]^+=\text{max}(0,x)$
 		\item Rockafellar 和 Uryasev 提出，当$P(R)$的解析式未知时，可以使用基于历史数据的情景分析法，产生情景矩阵，将多重积分转化为求和运算；
-		\item 假设有$m$种情况，可以取$N$种债券$m$个时期的收益率
+		\item 假设有$m$种情况，可以取$N$种债券$m$个时期的收益率~\cite{Rong2007}
 		$$
 		\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
 		$$
-		\cite{Rong2007}
 	\end{itemize}
 \end{frame}
 
@@ -420,7 +418,7 @@
 		\end{tabular}%
 		}
 		\caption{Strategy Comparison}
-		\label{tab:addlabel}%
+		\label{tab:compar}%
 	\end{table}%
 \end{frame}
 
@@ -444,7 +442,7 @@
 	\end{enumerate}
 \end{frame}
 
-\subsection{不足与改进}
+\subsection{不足}
 \begin{frame}{不足}
 	\begin{enumerate}
 		\item 数据量小
@@ -469,22 +467,21 @@
 	\end{enumerate}
 \end{frame}
 
-\subsection{不足与改进}
+\subsection{改进}
 \begin{frame}{针对CVaR策略的改进方向}
 	\begin{enumerate}
 		\item 改进目标函数的估计方法
 		\begin{itemize}
 			\item $F_{\alpha}(w,\lambda)=\lambda+\frac{1}{1-\alpha}\int_{R\in R^N}[L(w,R)-\lambda]^{+}P(R)dR$
 			\item 目标函数中包含极大值函数，是非光滑凸规划问题
-			\item 考虑使用非参数核估计方法
-			\cite{Huang2014}
+			\item 考虑使用非参数核估计方法~\cite{Huang2014}
 		\end{itemize}
 		\item 改进约束条件
 		\begin{itemize}
 			\item 考虑交易成本
 			\item 加入投资者观点，如定价误差参数、预期收益率等 $w^TR\geq \pi$
-			\item 梯度计算公式+迫近束求解
-			\cite{Huang2022}
+			\item 梯度计算公式+迫近束求解~\cite{Tong2021}
+			\item 假设一种分布，如非对称-Laplace分布~\cite{Huang2022}
 		\end{itemize}
 		\item  改进代码实现方法
 		\begin{itemize}
@@ -496,8 +493,9 @@
 	\end{enumerate}
 \end{frame}
 
-\section{附录}
-\subsection{因子权重}
+% 附录部分
+\appendix
+\section{因子权重}
 \begin{frame}{因子权重}
 	\begin{enumerate}
 		\item 三种方法对应的因子权重
@@ -533,21 +531,21 @@
 			\end{tabular}%
 			}
 			\caption{Weights of Factors}
-			\label{tab:addlabel}%
+			\label{tab:top factors}%
 		\end{table}%
 	\end{enumerate}
 \end{frame}
 
-\subsection{参考文献}
-	\begin{frame}{参考文献}
-		\bibliographystyle{plain}
-		\bibliography{references}
-	\end{frame}
-\subsection{Ending}
-% 自定义结束页
-\begin{frame}
+\section{参考文献}
+\begin{frame}[t, allowframebreaks]
+	\frametitle{参考文献}
+	\bibliographystyle{plain}
+	\bibliography{references.bib}
+	\vfill
 	\begin{center}
 		\Huge\textbf{Thank You!}
 	\end{center}
+	\vfill
 \end{frame}
+
 \end{document}
