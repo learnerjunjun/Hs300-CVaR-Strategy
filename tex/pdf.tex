@@ -135,15 +135,15 @@
 
 \begin{frame}{CVaR计算}
 	\begin{itemize}
-		\item 利用Rockafellar和Uryasev同时计算$\text{VaR}$和$\text{CVaR}$的功能函数$F_{\alpha}(w,R)$有
+		\item 利用Rockafellar和Uryasev同时计算$\text{VaR}$和$\text{CVaR}$的功能函数$F_{\alpha}(w,\lambda)$有
 		$$
 		F_{\alpha}(w,\lambda)=\lambda+\frac{1}{1-\alpha}\int_{R\in R^N}[L(w,R)-\lambda]^{+}P(R)dR
 		$$
-		其中，$\lambda$即$\text{VaR}$值，$[0,x]^+=\text{max}(0,x)$
+		其中，$\lambda$即$\text{VaR}$值，$[x]^{+} = \text{max}(0,x)$
 		\item Rockafellar 和 Uryasev 提出，当$P(R)$的解析式未知时，可以使用基于历史数据的情景分析法，产生情景矩阵，将多重积分转化为求和运算；
 		\item 假设有$m$种情况，可以取$N$种债券$m$个时期的收益率~\cite{Rong2007}
 		$$
-		\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
+		\widehat{F}_{\alpha}(w,\lambda)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]^{+}
 		$$
 	\end{itemize}
 \end{frame}
@@ -155,7 +155,7 @@
 		\begin{itemize}	
 			\item 目标函数(决策变量: $w$)  \\
 			$$
-			\text{min}_{w} \ \lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[-w^TR_t-\lambda]
+			\text{min}_{w} \ \lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[-w^TR_t-\lambda]^{+}
 			$$
 			\item 约束条件 \\
 			$$
@@ -257,7 +257,7 @@
 			\item 合并过去$40$个月历史数据，及预测的下$1$个月数据，形成新的数据集
 			\item 代入$m$，$\alpha$，$L(w,R_t)=-Weights.T \times R_t$，$\lambda$到之前的解析式中
 			$$
-			\widehat{F}_{\alpha}(w,R)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]
+			\widehat{F}_{\alpha}(w,\lambda)=\lambda+\frac{1}{m(1-\alpha)}\sum_{t=1}^{m}[L(w,R_t)-\lambda]^{+}
 			$$
 		\end{itemize}
 	\end{enumerate}
