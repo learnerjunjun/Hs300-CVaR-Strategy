@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0a77c77e-7b4d-45d8-ae07-6f34b711b823" name="Changes" comment="update" />
+    <list default="true" id="0a77c77e-7b4d-45d8-ae07-6f34b711b823" name="Changes" comment="data update" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -164,6 +164,7 @@
       <workItem from="1701780036809" duration="206000" />
       <workItem from="1701781226270" duration="187000" />
       <workItem from="1701827532181" duration="47000" />
+      <workItem from="1701833931268" duration="624000" />
     </task>
     <task id="LOCAL-00001" summary="latex added">
       <option name="closed" value="true" />
@@ -373,7 +374,23 @@
       <option name="project" value="LOCAL" />
       <updated>1701781405257</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="data update">
+      <option name="closed" value="true" />
+      <created>1701834427242</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1701834427242</updated>
+    </task>
+    <task id="LOCAL-00028" summary="data update">
+      <option name="closed" value="true" />
+      <created>1701834449555</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1701834449555</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -394,7 +411,8 @@
     <MESSAGE value="latex added" />
     <MESSAGE value="markdown files for idea" />
     <MESSAGE value="update" />
-    <option name="LAST_COMMIT_MESSAGE" value="update" />
+    <MESSAGE value="data update" />
+    <option name="LAST_COMMIT_MESSAGE" value="data update" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Portfolio_Optimization$hs300.coverage" NAME="hs300 Coverage Results" MODIFIED="1700901800625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/hs300_2005-2022" />

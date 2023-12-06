@@ -10,27 +10,8 @@ By 11.12
 
   summary: 从4848只股票中随机选取5个股票的收益分布并非正态分布
 
-  ```python
-  distributions = ['expon', 'gamma','dgamma', 'norm','lognorm','skewnorm','laplace_asymmetric','laplace','loglaplace','genhyperbolic','tukeylambda','johnsonsu']
-  ```
-
-  -  Ressults:
-
-    ```python
-    1. {'laplace_asymmetric': {'kappa': 0.804808257327414, 'loc': -0.028237365914254044, 'scale': 0.07258159259853167}}
-    2. {'genhyperbolic': {'p': 9.415813694597688, 'a': 0.0008811038514943892, 'b': 4.79864127069472e-05, 'loc': -0.01637876097454328, 'scale': 1.6828948682258248e-05}}
-    3. {'genhyperbolic': {'p': -0.19367876319304736, 'a': 0.34996556155164094, 'b': 0.10195329562265809, 'loc': -0.02292908464378212, 'scale': 0.057134202860838555}}
-    4. {'laplace_asymmetric': {'kappa': 0.8567977791270114, 'loc': -0.035844882806033845, 'scale': 0.09289283989008722}}
-    5. {'dgamma': {'a': 0.6500770716900943, 'loc': 0.006246290000000001, 'scale': 0.08537341704153789}}
-    6. {'loglaplace': {'c': 5.7663364523688205, 'loc': -0.5170124094757588, 'scale': 0.5125570338522736}}
-    7. {'genhyperbolic': {'p': 0.6491938935454755, 'a': 2.8599456624473387e-10, 'b': 2.1215505907123596e-10, 'loc': -0.07644990000797401, 'scale': 9.304192611400532e-12}}
-    8. {'skewnorm': {'a': 2.759384057353138, 'loc': -0.12462884934077859, 'scale': 0.1749000774381379}}
-    9. {'tukeylambda': {'lam': 1.197044768918491, 'loc': 0.009560623113440121, 'scale': 0.2917082908878366}}
-    10. {'johnsonsu': {'a': -0.43284121875181014, 'b': 1.1016306805556269, 'loc': -0.03199115272939734, 'scale': 0.06427318561469116}}
-    ```
-
-    
-
+  
+  
 - [ ] 建模
 
 - [ ] 收益预测
@@ -63,15 +44,6 @@ By 11.12
 
 - Black-Scholes Model
 
-  ```markdown
-  In deriving our formula for the value of an option in terms of the price of the stock,we will assume ideal conditions"in the market for the stock and for the option:
-  a)The short-term interest rate is known and is constant through time. b)The stock price follows a random walk in continuous time with a variance rate proportional to the square of the stock price.Thus the dis- tribution of possible stock prices at the end of any finite interval is log- normal.The variance rate of the return on the stock is constant.
-  c)The stock pays no dividends or other distributions.
-  d)The option is"European,"that is,it can only be exercised at maturity.
-  e)There are no transaction costs in buying or selling the stock or the option.
-  f)It is possible to borrow any fraction of the price of a security to buy it or to hold it,at the short-term interest rate.
-  g)There are no penalties to short selling.A seller who does not own a security will simply accept the price of the security from a buyer,and will agree to settle with the buyer on some future date by paying him an amount equal to the price of the security on that date.
-  ```
 
 * CAPM
   - Markowitz
