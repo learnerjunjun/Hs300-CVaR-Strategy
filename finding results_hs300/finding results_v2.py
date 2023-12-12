@@ -685,7 +685,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'Coef.png'
+filename = 'results/Coef.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -708,7 +708,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'Drawdown_Comparison_Coef.png'
+filename = 'results/Drawdown_Comparison_Coef.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -740,7 +740,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'IC.png'
+filename = 'results/IC.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -763,7 +763,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'Drawdown_Comparison_IC.png'
+filename = 'results/Drawdown_Comparison_IC.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -795,7 +795,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'Corr.png'
+filename = 'results/Corr.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -818,7 +818,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'Drawdown_Comparison_Corr.png'
+filename = 'results/Drawdown_Comparison_Corr.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -868,7 +868,7 @@ results_df.to_excel(para.path_results + 'results_summary.xlsx', index=False)
 
 # 导出最优选股及权重
 # 创建一个Excel写入对象
-filename = 'portfolio_data.xlsx'
+filename = 'results/portfolio_data.xlsx'
 filepath = os.path.join(para.path_results, filename)
 writer = pd.ExcelWriter(filepath, engine='xlsxwriter')
 # 将DataFrame写入Excel文件的不同sheet页
