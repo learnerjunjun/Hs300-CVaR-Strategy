@@ -6,6 +6,8 @@ import xlsxwriter
 import warnings
 warnings.filterwarnings('ignore')
 import os
+from scipy.optimize import minimize
+import cvxpy as cp
 
 # hs300名单 2022.1.1之前
 hs300 = pd.read_csv(r'../hs300_2005-2022/hs300_monthly.csv', dtype=object)
@@ -33,14 +35,119 @@ class Para():
     path_results = './results/'
     seed = 42  # -- random seed
     n_stock = 5166
+    #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
+    train_min_months = 48 #训练最少使用数据量
+    train_max_months = 60 #训练最多使用数据量
+    train_update_months = 3 #训练轮动周期
+    max_date = 284
+    max_select = 20 #选股最多数量
+    roll_back = 24  #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
+    confidence_level = 0.99 #置信水平
+    risk_free_rate = 0  # 无风险利率假设为0
     y_data = 'curr_return'  #'curr_return' ,'excess_return_curr','next_return','excess_return_next'
 para = Para()
 
-train_data_min_months = 60  # 每次模型训练所用数据最少不低于
-train_data_max_months = 84  # 每次模型训练所用数据最大不超过
-train_update_months = 3  # 设置更新周期
+# 定义函数
+
+# 基于信息系数大小的权重分配
+# 与下一期收益率更高的因子有更高的权重
+def assign_weight_by_coefficient(information_coefficient):
+    # 计算IC值绝对值总和
+    ic_sum = abs(information_coefficient['IC']).sum()
+    # 更改阈值为0.3
+    threshold = 0.3
+    # 分配权重
+    information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
+            abs(information_coefficient['IC']) / ic_sum)
+    information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.5 * (
+            (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
+    return information_coefficient
+
+# 优化器-1
+def calculate_portfolio_weights(mean_returns, cov_matrix):
+    num_assets = len(mean_returns)
+    weights = cp.Variable(num_assets)
+    # 定义目标函数
+    objective = cp.Minimize(cp.quad_form(weights, cov_matrix))
+    # 添加约束条件
+    constraints = [weights >= 0, cp.sum(weights) == 1]
+    # 创建问题并求解
+    problem = cp.Problem(objective, constraints)
+    problem.solve()
+    # 获取最优权重
+    result = weights.value
+    return np.array(result)
+
+# 优化器-2
+def calculate_portfolio_returns(returns, weights):
+    portfolio_returns = np.dot(weights.T, returns)
+    return portfolio_returns
+def calculate_var(portfolio_returns, confidence_level=0.99):
+    var = np.percentile(portfolio_returns, 100 * (1 - confidence_level))
+    return var
+def calculate_cvar(portfolio_returns, confidence_level=0.99):
+    var = calculate_var(portfolio_returns, confidence_level)
+    loss_function = -portfolio_returns
+    cvar = var + (1 / (len(portfolio_returns) * (1 - confidence_level))) * np.sum(
+        np.maximum(loss_function - var, 0))
+    return cvar
+def objective_function(weights, returns, confidence_level):
+    portfolio_returns = calculate_portfolio_returns(returns, weights)
+    cvar = calculate_cvar(portfolio_returns, confidence_level)
+    return cvar
+def constraint_function(weights):
+    return np.sum(weights) - 1
+def minimize_cvar(returns, confidence_level=0.99):
+    n_stocks = returns.shape[0]
+    initial_weights = np.random.rand(n_stocks)
+    initial_weights = initial_weights / np.sum(initial_weights)
+    bounds = [(0, 1) for _ in range(n_stocks)]
+    constraints = [{'type': 'eq', 'fun': constraint_function}]
+    result = minimize(objective_function, initial_weights, args=(returns, confidence_level),
+                          bounds=bounds, constraints=constraints)
+    min_cvar = result.fun
+    optimal_weights = result.x
+    return min_cvar, optimal_weights
+
+# 计算回撤
+def calculate_drawdown(data):
+    data['peak_value'] = data['compound_value'].cummax()
+    data['drawdown'] = (data['peak_value'] - data['compound_value']) / data['peak_value']
+    max_drawdown = data['drawdown'].max()
+    return data, max_drawdown
+# 计算年化收益率和波动率
+def calculate_annualized_metrics(data):
+    monthly_returns = data['return']  # 假设'return'列包含月度收益率
+    # 计算均值
+    mean_monthly_return = monthly_returns.mean()
+    # 使用均值计算年化收益率
+    annualized_return = (1 + mean_monthly_return) ** 12 - 1  # 年化收益率
+    annualized_volatility = np.std(monthly_returns) * np.sqrt(12)  # 年化波动率
+    return annualized_return, annualized_volatility
+# 计算夏普比率（使用指数形式计算收益率）
+def calculate_sharpe_ratio(annualized_return, annualized_volatility,risk_free_rate):
+    sharpe_ratio = (annualized_return - risk_free_rate) / annualized_volatility if annualized_volatility != 0 else 0
+    return sharpe_ratio
+# 计算信息比率（使用指数形式计算收益率）
+def calculate_information_ratio(data_strategy, data_benchmark, risk_free_rate):
+    annualized_return_strategy, annualized_volatility_strategy = calculate_annualized_metrics(data_strategy)
+    annualized_return_benchmark, annualized_volatility_benchmark = calculate_annualized_metrics(data_benchmark)
+    excess_returns = data_strategy['return'] - data_benchmark['return']
+    annualized_volatility_excess = np.std(excess_returns) * np.sqrt(12)  # 月度超额收益波动率乘以根号12得到年化超额波动率
+    information_ratio = (
+                                annualized_return_strategy - annualized_return_benchmark - risk_free_rate
+                        ) / annualized_volatility_excess if annualized_volatility_excess != 0 else 0
+    return information_ratio
+# 计算收益回撤比（使用指数形式计算收益率）
+def calculate_return_drawdown_ratio(index_annual_return, max_drawdown):
+    return index_annual_return / max_drawdown if max_drawdown != 0 else 0
+
+# 训练部分
+train_data_min_months = para.train_min_months  # 每次模型训练所用数据最少不低于
+train_data_max_months = para.train_max_months  # 每次模型训练所用数据最大不超过
+train_update_months = para.train_update_months  # 设置更新周期
 start_date = 85  # 第一次滚动训练开始日期
-end_date = start_date + train_data_min_months  # 第一次滚动训练结束日期
+end_date = start_date + train_data_min_months - 1  # 第一次滚动训练结束日期
 
 # 创建一个空的DataFrame
 return_data_combined_coef = pd.DataFrame()
@@ -57,7 +164,7 @@ return_data_combined_cvar_corr = pd.DataFrame()
 weights_data_combined_cvar_corr = pd.DataFrame()
 return_data_combined_hs300 = pd.DataFrame()
 
-while end_date <= 284:
+while end_date <= para.max_date:
     period_train = range(start_date, end_date + 1)
     ## 生成样本内数据集
     # -- generate in-sample data
@@ -132,35 +239,21 @@ while end_date <= 284:
     X_in_sample_ic = merged_data.loc[:, 'EP':'bias']
     y_in_sample_ic = merged_data[para.y_data]
     ic_values = {}  # 存储每个因子的IC值
-    for column in list(X_in_sample_ic.columns):  
+    for column in list(X_in_sample_ic.columns):
         factor_values = X_in_sample_ic[column]
         correlation = np.corrcoef(factor_values, y_in_sample_ic)[0, 1]
         ic_values[column] = correlation
     # 创建包含因子和IC值的DataFrame
     information_coefficient = pd.DataFrame(list(ic_values.items()), columns=['Factor', 'IC'])
-    information_coefficient
+    #基于信息系数
+    weighted_factors_coefficient = assign_weight_by_coefficient(information_coefficient)
+    factor_weights_ic = np.array(weighted_factors_coefficient['Weight'])
 
     # 基于回归系数
     # 获取回归系数
     coefficients = model.coef_
     # 计算因子权重
     factor_weights_coef = abs(coefficients) / sum(abs(coefficients))
-
-    # 基于信息系数大小的权重分配
-    # 与下一期收益率更高的因子有更高的权重
-    def assign_weight_by_coefficient(information_coefficient):
-        # 计算IC值绝对值总和
-        ic_sum = abs(information_coefficient['IC']).sum()
-        # 更改阈值为0.3
-        threshold = 0.3
-        # 分配权重
-        information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
-            abs(information_coefficient['IC']) / ic_sum)
-        information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.5 * (
-            (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
-        return information_coefficient
-    weighted_factors_coefficient = assign_weight_by_coefficient(information_coefficient)
-    factor_weights_ic = np.array(weighted_factors_coefficient['Weight'])
 
     # 基于协方差矩阵
     covariance_matrix = X_in_sample.cov()
@@ -177,7 +270,7 @@ while end_date <= 284:
 
     # 样本外预测
     test_date_start = end_date + 1
-    test_date_end = end_date + 3
+    test_date_end = end_date + para.train_update_months
     period_test = range(test_date_start, test_date_end + 1)
     combined_y_pred_return = pd.DataFrame()
     combined_y_curr_return = pd.DataFrame()
@@ -225,61 +318,8 @@ while end_date <= 284:
             y_true_curr_month = pd.Series(combined_y_curr_return[i_month])
             y_score_curr_month = pd.Series(combined_y_pred_return[i_month])
             print('testing set, month %d, ic = %.2f' % (i_month, y_true_curr_month.corr(y_score_curr_month)))
-    # 优化器-1
-    from scipy.optimize import minimize
-    import cvxpy as cp
-    def calculate_portfolio_weights(mean_returns, cov_matrix):
-        num_assets = len(mean_returns)
-        weights = cp.Variable(num_assets)
-        # 定义目标函数
-        objective = cp.Minimize(cp.quad_form(weights, cov_matrix))
-        # 添加约束条件
-        constraints = [weights >= 0, cp.sum(weights) == 1]
-        # 创建问题并求解
-        problem = cp.Problem(objective, constraints)
-        problem.solve()
-        # 获取最优权重
-        result = weights.value
-        return np.array(result)
 
-    # 优化器-2
-    def calculate_portfolio_returns(returns, weights):
-        portfolio_returns = np.dot(weights.T, returns)
-        return portfolio_returns
-
-    def calculate_var(portfolio_returns, confidence_level=0.99):
-        var = np.percentile(portfolio_returns, 100 * (1 - confidence_level))
-        return var
-
-    def calculate_cvar(portfolio_returns, confidence_level=0.99):
-        var = calculate_var(portfolio_returns, confidence_level)
-        loss_function = -portfolio_returns
-        cvar = var + (1 / (len(portfolio_returns) * (1 - confidence_level))) * np.sum(
-            np.maximum(loss_function - var, 0))
-        return cvar
-
-    def objective_function(weights, returns, confidence_level):
-        portfolio_returns = calculate_portfolio_returns(returns, weights)
-        cvar = calculate_cvar(portfolio_returns, confidence_level)
-        return cvar
-
-    def constraint_function(weights):
-        return np.sum(weights) - 1
-
-    def minimize_cvar(returns, confidence_level=0.99):
-        n_stocks = returns.shape[0]
-        initial_weights = np.random.rand(n_stocks)
-        initial_weights = initial_weights / np.sum(initial_weights)
-        bounds = [(0, 1) for _ in range(n_stocks)]
-        constraints = [{'type': 'eq', 'fun': constraint_function}]
-
-        result = minimize(objective_function, initial_weights, args=(returns, confidence_level),
-                          bounds=bounds, constraints=constraints)
-        min_cvar = result.fun
-        optimal_weights = result.x
-        return min_cvar, optimal_weights
-
-    max_select = 30  # 最长的数据长度
+    max_select = para.max_select  # 最长的数据长度
     # 创建一个空的DataFrame来存储最优投资组合权重
     portfolio_weights_df_coef = pd.DataFrame()
     portfolio_weights_df_ic = pd.DataFrame()
@@ -341,7 +381,7 @@ while end_date <= 284:
         selected_stocks_corr.set_index('code', inplace=True)
 
         # 整合历史与预测数据
-        period_select = range(test_date_start - 30, i_month_1 + 1)
+        period_select = range(test_date_start - para.roll_back, i_month_1 + 1)
         combined_y_curr_return_past = pd.DataFrame()
         for i_month_2 in period_select:
             # -- load
@@ -395,7 +435,7 @@ while end_date <= 284:
         portfolio_weights_corr = calculate_portfolio_weights(mean_returns_corr, cov_matrix_corr)
         
         # 使用CVaR计算最优权重
-        confidence_level = 0.99
+        confidence_level = para.confidence_level
         returns_cvar_coef = top_select_stocks_return_coef
         returns_cvar_ic = top_select_stocks_return_ic
         returns_cvar_corr = top_select_stocks_return_corr
@@ -485,44 +525,52 @@ while end_date <= 284:
     return_data_combined_hs300 = pd.concat([return_data_combined_hs300 , return_data_hs300],ignore_index=True)
 
     # -- evaluation
-    # 计算年化收益率和波动率
-    def calculate_annualized_metrics(data):
-        monthly_returns = data['return']  # 假设'return'列包含月度收益率
-        # 计算均值
-        mean_monthly_return = monthly_returns.mean()
-        # 使用均值计算年化收益率
-        annualized_return = (1 + mean_monthly_return) ** 12 - 1  # 年化收益率
-        annualized_volatility = np.std(monthly_returns) * np.sqrt(12)  # 年化波动率
-        return annualized_return, annualized_volatility
+    # 计算年化收益率、波动率及夏普比率
+    risk_free_rate = para.risk_free_rate  # 无风险利率假设为0
+    ann_return_coef = (1 + np.mean(
+        return_data_combined_coef[return_data_combined_coef['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_coef = np.std(
+        return_data_combined_coef[return_data_combined_coef['month'].isin(period_test)]['return']) * np.sqrt(12)
+    sharpe_ratio_coef = (ann_return_coef - risk_free_rate) / ann_vol_coef
 
-    # 计算夏普比率
-    def calculate_sharpe_ratio(ann_excess_return, ann_excess_vol):
-        return ann_excess_return / ann_excess_vol  # 计算夏普比率
+    ann_return_ic = (1 + np.mean(
+        return_data_combined_ic[return_data_combined_ic['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_ic = np.std(
+        return_data_combined_ic[return_data_combined_ic['month'].isin(period_test)]['return']) * np.sqrt(12)
+    sharpe_ratio_ic = (ann_return_ic - risk_free_rate) / ann_vol_ic
 
-    ann_return_coef, ann_vol_coef = calculate_annualized_metrics(return_data_combined_coef)
-    sharpe_ratio_coef = calculate_sharpe_ratio(ann_return_coef, ann_vol_coef)
+    ann_return_corr = (1 + np.mean(
+        return_data_combined_corr[return_data_combined_corr['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_corr = np.std(
+        return_data_combined_corr[return_data_combined_corr['month'].isin(period_test)]['return']) * np.sqrt(12)
+    sharpe_ratio_corr = (ann_return_corr - risk_free_rate) / ann_vol_corr
 
-    ann_return_ic, ann_vol_ic = calculate_annualized_metrics(return_data_combined_ic)
-    sharpe_ratio_ic = calculate_sharpe_ratio(ann_return_ic, ann_vol_ic)
+    ann_return_cvar_coef = (1 + np.mean(
+        return_data_combined_cvar_coef[return_data_combined_cvar_coef['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_cvar_coef = np.std(
+        return_data_combined_cvar_coef[return_data_combined_cvar_coef['month'].isin(period_test)]['return']) * np.sqrt(
+        12)
+    sharpe_ratio_cvar_coef = (ann_return_cvar_coef - risk_free_rate) / ann_vol_cvar_coef
 
-    ann_return_corr, ann_vol_corr = calculate_annualized_metrics(return_data_combined_corr)
-    sharpe_ratio_corr = calculate_sharpe_ratio(ann_return_corr, ann_vol_corr)
+    ann_return_cvar_ic = (1 + np.mean(
+        return_data_combined_cvar_ic[return_data_combined_cvar_ic['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_cvar_ic = np.std(
+        return_data_combined_cvar_ic[return_data_combined_cvar_ic['month'].isin(period_test)]['return']) * np.sqrt(12)
+    sharpe_ratio_cvar_ic = (ann_return_cvar_ic - risk_free_rate) / ann_vol_cvar_ic
 
-    ann_return_cvar_coef, ann_vol_cvar_coef = calculate_annualized_metrics(return_data_combined_cvar_coef)
-    sharpe_ratio_cvar_coef = calculate_sharpe_ratio(ann_return_cvar_coef, ann_vol_cvar_coef)
+    ann_return_cvar_corr = (1 + np.mean(
+        return_data_combined_cvar_corr[return_data_combined_cvar_corr['month'].isin(period_test)]['return'])) ** 12 - 1
+    ann_vol_cvar_corr = np.std(
+        return_data_combined_cvar_corr[return_data_combined_cvar_corr['month'].isin(period_test)]['return']) * np.sqrt(
+        12)
+    sharpe_ratio_cvar_corr = (ann_return_cvar_corr - risk_free_rate) / ann_vol_cvar_corr
 
-    ann_return_cvar_ic, ann_vol_cvar_ic = calculate_annualized_metrics(return_data_combined_cvar_ic)
-    sharpe_ratio_cvar_ic = calculate_sharpe_ratio(ann_return_cvar_ic, ann_vol_cvar_ic)
-
-    ann_return_cvar_corr, ann_vol_cvar_corr = calculate_annualized_metrics(return_data_combined_cvar_corr)
-    sharpe_ratio_cvar_corr = calculate_sharpe_ratio(ann_return_cvar_corr, ann_vol_cvar_corr)
-
-    ann_return_hs300 = np.mean(
-        return_data_combined_hs300[return_data_combined_hs300['month'].isin(period_test)]['return']) * 12
+    ann_return_hs300 = (1 + np.mean(
+        return_data_combined_hs300[return_data_combined_hs300['month'].isin(period_test)]['return'])) ** 12 - 1
     ann_vol_hs300 = np.std(
         return_data_combined_hs300[return_data_combined_hs300['month'].isin(period_test)]['return']) * np.sqrt(
         12)
-    sharpe_ratio_hs300 = ann_return_hs300 / ann_vol_hs300
+    sharpe_ratio_hs300 = (ann_return_hs300 - risk_free_rate) / ann_vol_hs300
 
     print('回归系数')
     print('annual return = %.2f' % ann_return_coef)
@@ -554,12 +602,12 @@ while end_date <= 284:
     print('sharpe ratio = %.2f' % sharpe_ratio_hs300)
 
     ##数据集滚动
-    end_date += train_update_months
-    if train_data_max_months <= end_date - start_date:
-        start_date = end_date - train_data_max_months
-    else:
-        start_date = start_date
-    if end_date + 3 >= 284:
+    # 更新日期
+    start_date += train_update_months
+    # 限制训练数据的时间范围
+    end_date = min(start_date + train_data_min_months - 1, para.max_date)
+    # 若接近最大日期，则终止训练
+    if end_date + train_update_months >= para.max_date:
         break
 
 #计算累计收益
@@ -571,40 +619,6 @@ return_data_combined_corr['compound_value'] = (return_data_combined_corr['return
 return_data_combined_cvar_corr['compound_value'] = (return_data_combined_cvar_corr['return']+1).cumprod()
 return_data_combined_hs300['compound_value'] = (return_data_combined_hs300['return']+1).cumprod()
 
-# 计算回撤
-def calculate_drawdown(data):
-    data['peak_value'] = data['compound_value'].cummax()
-    data['drawdown'] = (data['peak_value'] - data['compound_value']) / data['peak_value']
-    max_drawdown = data['drawdown'].max()
-    return data, max_drawdown
-# 计算年化收益率和波动率
-def calculate_annualized_metrics(data):
-    monthly_returns = data['return']  # 假设'return'列包含月度收益率
-    # 计算均值
-    mean_monthly_return = monthly_returns.mean()
-    # 使用均值计算年化收益率
-    annualized_return = (1 + mean_monthly_return) ** 12 - 1  # 年化收益率
-    annualized_volatility = np.std(monthly_returns) * np.sqrt(12)  # 年化波动率
-    return annualized_return, annualized_volatility
-# 计算夏普比率（使用指数形式计算收益率）
-def calculate_sharpe_ratio(data, risk_free_rate):
-    annualized_return, annualized_volatility = calculate_annualized_metrics(data)
-    sharpe_ratio = (annualized_return - risk_free_rate) / annualized_volatility if annualized_volatility != 0 else 0
-    return sharpe_ratio
-# 计算信息比率（使用指数形式计算收益率）
-def calculate_information_ratio(data_strategy, data_benchmark, risk_free_rate):
-    annualized_return_strategy, annualized_volatility_strategy = calculate_annualized_metrics(data_strategy)
-    annualized_return_benchmark, annualized_volatility_benchmark = calculate_annualized_metrics(data_benchmark)
-    excess_returns = data_strategy['return'] - data_benchmark['return']
-    annualized_volatility_excess = np.std(excess_returns) * np.sqrt(12)  # 月度超额收益波动率乘以根号12得到年化超额波动率
-    information_ratio = (
-                                annualized_return_strategy - annualized_return_benchmark - risk_free_rate
-                        ) / annualized_volatility_excess if annualized_volatility_excess != 0 else 0
-    return information_ratio
-# 计算收益回撤比（使用指数形式计算收益率）
-def calculate_return_drawdown_ratio(index_annual_return, max_drawdown):
-    return index_annual_return / max_drawdown if max_drawdown != 0 else 0
-
 # 储存所有数据列
 data_columns = [
     'return_data_combined_coef',
@@ -615,13 +629,13 @@ data_columns = [
     'return_data_combined_cvar_corr',
     'return_data_combined_hs300'
 ]
-risk_free_rate = 0  # 无风险利率假设为0
+risk_free_rate = para.risk_free_rate  # 无风险利率假设为0
 results = []
 for column_name in data_columns:
     data_to_process = globals()[column_name]
     data_to_process, max_drawdown = calculate_drawdown(data_to_process)
     annualized_return, annualized_volatility = calculate_annualized_metrics(data_to_process)
-    sharpe_ratio = calculate_sharpe_ratio(data_to_process, risk_free_rate)
+    sharpe_ratio = calculate_sharpe_ratio(annualized_return,annualized_volatility,risk_free_rate)
     benchmark_data = return_data_combined_hs300  # 假设基准为return_data_combined_hs300
     information_ratio = calculate_information_ratio(data_to_process, benchmark_data, risk_free_rate)
     return_drawdown_ratio = calculate_return_drawdown_ratio(annualized_return, max_drawdown)
@@ -704,7 +718,7 @@ plot_drawdown_with_max(return_data_combined_coef, 'return_data_combined_coef')
 plot_drawdown_with_max(return_data_combined_cvar_coef, 'return_data_combined_cvar_coef')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(-0.01, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.7)  # 调整y轴范围
 # 设置日期显示的间隔和格式
 date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
 plt.xticks(ticks=plt.xticks()[0][::date_interval])
@@ -814,7 +828,7 @@ plot_drawdown_with_max(return_data_combined_corr, 'return_data_combined_corr')
 plot_drawdown_with_max(return_data_combined_cvar_corr, 'return_data_combined_cvar_corr')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(-0.01, 0.5)  # 调整y轴范围
+plt.ylim(-0.01, 0.7)  # 调整y轴范围
 # 设置日期显示的间隔和格式
 date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
 plt.xticks(ticks=plt.xticks()[0][::date_interval])
