@@ -107,6 +107,7 @@ while end_date <= 284:
         X_train, y_train = X_in_sample.copy(), y_in_sample.copy()
     # 有监督，连续型数据
     # -- linear regression
+
     from sklearn import linear_model
     from sklearn.decomposition import PCA
 
@@ -184,11 +185,11 @@ while end_date <= 284:
         # -- load
         file_name = para.path_data + str(i_month) + '.csv'
         data_curr_month = pd.read_csv(file_name, header=0)
-        # -- remove nan
-        data_curr_month = data_curr_month.dropna(axis=0)
         # --hs300
         data_curr_month['code'] = data_curr_month['stock'].str.replace('[^\d]', '', regex=True)
         data_curr_month = pd.merge(hs300, data_curr_month, on=['code', 'month'], how='inner')
+        # -- remove nan
+        data_curr_month = data_curr_month.dropna(axis=0)
         # -- generate X
         X_curr_month = data_curr_month.loc[:, 'EP':'bias']
         # -- pca
@@ -311,7 +312,10 @@ while end_date <= 284:
         data_last_month = data_last_month.dropna(axis=0)
         data_curr_month = data_curr_month.dropna(axis=0)
         # 打分法筛选出股票
-        data_for_score = data_last_month[data_last_month['month'] == i_month_1 - 1]
+        data_for_score_x = data_last_month.copy()
+        data_for_score_x = data_for_score_x.drop(labels=['month',para.y_data], axis=1)
+        data_for_score_y = data_curr_month[['month', 'code', para.y_data]]
+        data_for_score = pd.merge(data_for_score_y, data_for_score_x, on=['code'], how='inner')
         X_for_score = data_for_score.loc[:, 'EP':'bias']  # 提取数据
         y_curr_month = pd.DataFrame(
             {'month': data_for_score['month'], 'code': data_for_score['code'], 'curr_return': data_for_score[para.y_data]})
@@ -321,6 +325,7 @@ while end_date <= 284:
         scores_ic = X_for_score.dot(factor_weights_ic)
         scores_corr = X_for_score.dot(factor_weights_corr)
         n = max_select + 10
+
         selected_stocks_coef = scores_coef.nlargest(n)
         selected_stocks_ic = scores_ic.nlargest(n)
         selected_stocks_corr = scores_corr.nlargest(n)
@@ -336,7 +341,7 @@ while end_date <= 284:
         selected_stocks_corr.set_index('code', inplace=True)
 
         # 整合历史与预测数据
-        period_select = range(test_date_start - 36, i_month_1 + 1)
+        period_select = range(test_date_start - 30, i_month_1 + 1)
         combined_y_curr_return_past = pd.DataFrame()
         for i_month_2 in period_select:
             # -- load
@@ -400,10 +405,11 @@ while end_date <= 284:
 
         # 计算组合收益
         y_curr_month_return_coef = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_coef)]['curr_return']
-        portfolio_return_coef = np.dot(portfolio_weights_coef.T, y_curr_month_return_coef)
         y_curr_month_return_ic = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_ic)]['curr_return']
-        portfolio_return_ic = np.dot(portfolio_weights_ic.T, y_curr_month_return_ic)
         y_curr_month_return_corr = y_curr_month.loc[y_curr_month.index.intersection(stock_codes_corr)]['curr_return']
+
+        portfolio_return_coef = np.dot(portfolio_weights_coef.T, y_curr_month_return_coef)
+        portfolio_return_ic = np.dot(portfolio_weights_ic.T, y_curr_month_return_ic)
         portfolio_return_corr = np.dot(portfolio_weights_corr.T, y_curr_month_return_corr)
         portfolio_return_cvar_coef = np.dot(portfolio_weights_cvar_coef.T, y_curr_month_return_coef)
         portfolio_return_cvar_ic = np.dot(portfolio_weights_cvar_ic.T, y_curr_month_return_ic)
@@ -685,7 +691,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'results/Coef.png'
+filename = 'Coef.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -708,7 +714,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'results/Drawdown_Comparison_Coef.png'
+filename = 'Drawdown Comparison Coef.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -740,7 +746,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'results/IC.png'
+filename = 'IC.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -753,7 +759,7 @@ plot_drawdown_with_max(return_data_combined_ic, 'return_data_combined_ic')
 plot_drawdown_with_max(return_data_combined_cvar_ic, 'return_data_combined_cvar_ic')
 plot_drawdown_with_max(return_data_combined_hs300, 'return_data_combined_hs300')
 # 限制y轴范围
-plt.ylim(-0.01, 0.6)  # 调整y轴范围
+plt.ylim(-0.01, 0.7)  # 调整y轴范围
 # 设置日期显示的间隔和格式
 date_interval = 6  # 每隔10个月显示一个月份，至少显示一个月份
 plt.xticks(ticks=plt.xticks()[0][::date_interval])
@@ -763,7 +769,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'results/Drawdown_Comparison_IC.png'
+filename = 'Drawdown Comparison IC.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -795,7 +801,7 @@ plt.gcf().autofmt_xdate()  # 自动格式化日期显示
 plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Compound Value')
-filename = 'results/Corr.png'
+filename = 'Corr.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.tight_layout()
@@ -818,7 +824,7 @@ plt.legend()
 plt.xlabel('Month')
 plt.ylabel('Drawdown')
 plt.title('Drawdown Comparison')
-filename = 'results/Drawdown_Comparison_Corr.png'
+filename = 'Drawdown Comparison Corr.png'
 filepath = os.path.join(para.path_results, filename)
 plt.savefig(filepath, dpi=300)
 plt.show()
@@ -864,11 +870,11 @@ results_dict = {
 # 转换为 DataFrame
 results_df = pd.DataFrame(results_dict)
 # 将结果保存到 Excel 文件中
-results_df.to_excel(para.path_results + 'results_summary.xlsx', index=False)
+results_df.to_excel(para.path_results + 'results summary.xlsx', index=False)
 
 # 导出最优选股及权重
 # 创建一个Excel写入对象
-filename = 'results/portfolio_data.xlsx'
+filename = 'portfolio data.xlsx'
 filepath = os.path.join(para.path_results, filename)
 writer = pd.ExcelWriter(filepath, engine='xlsxwriter')
 # 将DataFrame写入Excel文件的不同sheet页
