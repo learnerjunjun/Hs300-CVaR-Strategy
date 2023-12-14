@@ -36,12 +36,14 @@ class Para():
     seed = 42  # -- random seed
     n_stock = 5166
     #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
-    train_min_months = 48 #训练最少使用数据量
-    train_max_months = 60 #训练最多使用数据量
+    #min=36,max=48,update=3,back=24，select=20的表现可以
+    train_start_month = 94 #训练开始时间 或者从94开始，年均收益率更高
+    train_min_months = 36 #训练最少使用数据量
+    train_max_months = 48 #训练最多使用数据量
     train_update_months = 3 #训练轮动周期
     max_date = 284
     max_select = 20 #选股最多数量
-    roll_back = 24  #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
+    roll_back = 24 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
     confidence_level = 0.99 #置信水平
     risk_free_rate = 0  # 无风险利率假设为0
     y_data = 'curr_return'  #'curr_return' ,'excess_return_curr','next_return','excess_return_next'
@@ -54,8 +56,8 @@ para = Para()
 def assign_weight_by_coefficient(information_coefficient):
     # 计算IC值绝对值总和
     ic_sum = abs(information_coefficient['IC']).sum()
-    # 更改阈值为0.3
-    threshold = 0.3
+    # 更改阈值为0.03
+    threshold = 0.03
     # 分配权重
     information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
             abs(information_coefficient['IC']) / ic_sum)
@@ -146,7 +148,7 @@ def calculate_return_drawdown_ratio(index_annual_return, max_drawdown):
 train_data_min_months = para.train_min_months  # 每次模型训练所用数据最少不低于
 train_data_max_months = para.train_max_months  # 每次模型训练所用数据最大不超过
 train_update_months = para.train_update_months  # 设置更新周期
-start_date = 85  # 第一次滚动训练开始日期
+start_date = para.train_start_month  # 第一次滚动训练开始日期
 end_date = start_date + train_data_min_months - 1  # 第一次滚动训练结束日期
 
 # 创建一个空的DataFrame
@@ -255,18 +257,24 @@ while end_date <= para.max_date:
     # 计算因子权重
     factor_weights_coef = abs(coefficients) / sum(abs(coefficients))
 
+    # 基于因子数据集的特征值，特征值大的权重高
     # 基于协方差矩阵
     covariance_matrix = X_in_sample.cov()
     # 计算协方差矩阵的逆
     inverse_covariance_matrix = np.linalg.inv(covariance_matrix)
-    # 计算每个因子的相关性得分
-    correlation_scores = np.sum(inverse_covariance_matrix, axis=0)
-    # 将相关性得分归一化为权重
-    weights = correlation_scores / np.sum(correlation_scores)
-    # 创建权重分配的DataFrame，并按权重降序排序
+    # 计算特征值和特征向量
+    eigenvalues, _ = np.linalg.eig(inverse_covariance_matrix)
+    # 使用特征值作为权重
+    weights = eigenvalues / np.sum(eigenvalues)  # 归一化
+    # 创建权重分配的 DataFrame
     factor_weights = pd.DataFrame({'Factor': X_in_sample.columns, 'Weight': weights})
-    factor_weights_sorted = factor_weights.sort_values(by='Weight', ascending=False)
-    factor_weights_corr = np.array(factor_weights_sorted['Weight'])
+    # 调整权重为正数并归一化
+    factor_weights['Weight'] = factor_weights['Weight'] - min(factor_weights['Weight'])
+    factor_weights['Weight'] = factor_weights['Weight'] / sum(factor_weights['Weight'])
+    # 确保所有权重为正数并且总和为1
+    # factor_weights['Weight'] = factor_weights['Weight'].apply(lambda x: max(x, 0))  # 确保所有权重大于等于0
+    # factor_weights['Weight'] = factor_weights['Weight'] / sum(factor_weights['Weight'])  # 归一化
+    factor_weights_corr = np.array(factor_weights['Weight'])
 
     # 样本外预测
     test_date_start = end_date + 1
@@ -309,15 +317,15 @@ while end_date <= para.max_date:
     if para.method in ['LR']:
         y_train.index = range(len(y_train))
         y_score_train = pd.Series(y_score_train)
-        print('training set, ic = %.2f' % y_train.corr(y_score_train))
+        print('training set, cc = %.2f' % y_train.corr(y_score_train))
         if para.percent_cv > 0:
             y_cv.index = range(len(y_cv))
             y_score_cv = pd.Series(y_score_cv)
-            print('cv set, ic = %.2f' % y_cv.corr(y_score_cv))
+            print('cv set, cc = %.2f' % y_cv.corr(y_score_cv))
         for i_month in period_test:
             y_true_curr_month = pd.Series(combined_y_curr_return[i_month])
             y_score_curr_month = pd.Series(combined_y_pred_return[i_month])
-            print('testing set, month %d, ic = %.2f' % (i_month, y_true_curr_month.corr(y_score_curr_month)))
+            print('testing set, month %d, cc = %.2f' % (i_month, y_true_curr_month.corr(y_score_curr_month)))
 
     max_select = para.max_select  # 最长的数据长度
     # 创建一个空的DataFrame来存储最优投资组合权重
