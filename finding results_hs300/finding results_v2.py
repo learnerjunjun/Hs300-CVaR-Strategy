@@ -8,6 +8,11 @@ warnings.filterwarnings('ignore')
 import os
 from scipy.optimize import minimize
 import cvxpy as cp
+from random import random, randint
+from skopt import gp_minimize
+from skopt.space import Real
+from skopt.utils import use_named_args
+from scipy.optimize import Bounds
 
 # hs300名单 2022.1.1之前
 hs300 = pd.read_csv(r'../hs300_2005-2022/hs300_monthly.csv', dtype=object)
@@ -37,20 +42,21 @@ class Para():
     n_stock = 5166
     #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
     #min=36,max=48,update=3,back=24，select=20的表现可以
-    train_start_month = 94 #训练开始时间 或者从94开始，年均收益率更高
+    train_start_test = 129 #测试集最早从第129个月开始
     train_min_months = 36 #训练最少使用数据量
+    train_start_month = train_start_test - train_min_months #训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
     train_max_months = 48 #训练最多使用数据量
     train_update_months = 3 #训练轮动周期
     max_date = 284
     max_select = 20 #选股最多数量
     roll_back = 24 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
+    CVaR_method = "simulated_annealing"  # "differential_evolution", "minimize_cvar_scipy", "genetic_algorithm", "simulated_annealing", "bayesian_optimization"
     confidence_level = 0.99 #置信水平
     risk_free_rate = 0  # 无风险利率假设为0
     y_data = 'curr_return'  #'curr_return' ,'excess_return_curr','next_return','excess_return_next'
 para = Para()
 
 # 定义函数
-
 # 基于信息系数大小的权重分配
 # 与下一期收益率更高的因子有更高的权重
 def assign_weight_by_coefficient(information_coefficient):
@@ -59,9 +65,9 @@ def assign_weight_by_coefficient(information_coefficient):
     # 更改阈值为0.03
     threshold = 0.03
     # 分配权重
-    information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
+    information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.6 * (
             abs(information_coefficient['IC']) / ic_sum)
-    information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.5 * (
+    information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.4 * (
             (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
     return information_coefficient
 
@@ -80,15 +86,13 @@ def calculate_portfolio_weights(mean_returns, cov_matrix):
     result = weights.value
     return np.array(result)
 
-# 优化器-2
+# 优化器-2 非线性优化问题
 def calculate_portfolio_returns(returns, weights):
+    weights = np.array(weights)
     portfolio_returns = np.dot(weights.T, returns)
     return portfolio_returns
-def calculate_var(portfolio_returns, confidence_level=0.99):
+def calculate_cvar(portfolio_returns, confidence_level):
     var = np.percentile(portfolio_returns, 100 * (1 - confidence_level))
-    return var
-def calculate_cvar(portfolio_returns, confidence_level=0.99):
-    var = calculate_var(portfolio_returns, confidence_level)
     loss_function = -portfolio_returns
     cvar = var + (1 / (len(portfolio_returns) * (1 - confidence_level))) * np.sum(
         np.maximum(loss_function - var, 0))
@@ -97,18 +101,143 @@ def objective_function(weights, returns, confidence_level):
     portfolio_returns = calculate_portfolio_returns(returns, weights)
     cvar = calculate_cvar(portfolio_returns, confidence_level)
     return cvar
-def constraint_function(weights):
-    return np.sum(weights) - 1
-def minimize_cvar(returns, confidence_level=0.99):
+# 差分进化算法优化
+def differential_evolution(returns, confidence_level, population_size=50, max_generations=100,
+                           F=0.5, CR=0.7):
+    n_stocks = returns.shape[0]
+    population = np.random.rand(population_size, n_stocks)
+    population /= np.sum(population, axis=1)[:, np.newaxis]  # 确保权重总和为1
+    for gen in range(max_generations):
+        for i in range(population_size):
+            target_vector = population[i]
+            indices = list(range(population_size))
+            indices.remove(i)
+            a, b, c = np.random.choice(indices, 3, replace=False)
+            mutant_vector = population[a] + F * (population[b] - population[c])
+            crossover_mask = np.random.rand(n_stocks) < CR
+            trial_vector = np.where(crossover_mask, mutant_vector, target_vector)
+            trial_vector /= np.sum(trial_vector)  # 确保权重总和为1
+            if objective_function(trial_vector, returns, confidence_level) < objective_function(target_vector, returns, confidence_level):
+                population[i] = trial_vector
+    best_portfolio = min(population, key=lambda x: objective_function(x, returns, confidence_level))
+    best_cvar = objective_function(best_portfolio, returns, confidence_level)
+    return best_cvar, best_portfolio
+# 定义遗传优化函数
+def genetic_algorithm(returns, confidence_level, pop_size=50, generations=100, mutation_rate=0.1):
+    def initialize_population(pop_size, n_stocks):
+        population = []
+        for _ in range(pop_size):
+            weights = np.random.rand(n_stocks)
+            weights /= np.sum(weights)  # 确保权重总和为1
+            population.append(weights)
+        return population
+    def selection(population, scores, k=5):
+        selected = []
+        for _ in range(k):
+            idx = randint(0, len(population) - 1)
+            selected.append((population[idx], scores[idx]))
+        selected.sort(key=lambda x: x[1])
+        return [ind for ind, _ in selected[:k]]
+    def crossover(parent1, parent2):
+        split = randint(1, len(parent1) - 1)
+        child = np.concatenate((parent1[:split], parent2[split:]), axis=0)
+        child /= np.sum(child)  # 确保权重总和为1
+        return child
+    def mutation(child, mutation_rate=0.1):
+        for i in range(len(child)):
+            if random() < mutation_rate:
+                child[i] = random()
+        child /= np.sum(child)  # 确保权重总和为1
+        return child
+    n_stocks = returns.shape[0]
+    population = initialize_population(pop_size, n_stocks)
+    for gen in range(generations):
+        scores = [objective_function(ind, returns, confidence_level) for ind in population]
+        parents = selection(population, scores)
+        next_gen = []
+        while len(next_gen) < pop_size:
+            idx1, idx2 = np.random.choice(len(parents), 2, replace=False)
+            parent1, parent2 = parents[idx1], parents[idx2]
+            offspring = crossover(parent1, parent2)
+            offspring = mutation(offspring, mutation_rate)
+            next_gen.append(offspring)
+        population = next_gen
+    best_portfolio = min(population, key=lambda x: objective_function(x, returns, confidence_level))
+    best_cvar = objective_function(best_portfolio, returns, confidence_level)
+    return best_cvar, best_portfolio
+# 贝叶斯优化函数
+# Define the objective function for Bayesian optimization
+def bayesian_optimization(returns, confidence_level):
+    n_stocks = returns.shape[0]
+    # Define the search space for weights [0, 1] for each stock
+    space = [Real(0.0, 1.0, name=f'w{i}') for i in range(n_stocks)]
+    @use_named_args(space)
+    def objective_function_wrapper(**params):
+        weights = [params[f'w{i}'] for i in range(n_stocks)]
+        weights /= np.sum(weights)  # Ensure sum of weights equals 1
+        return objective_function(weights, returns, confidence_level)
+    # Perform Bayesian optimization
+    result = gp_minimize(
+        objective_function_wrapper,
+        dimensions=space,
+        n_calls=20,
+        random_state=para.seed
+    )
+    best_cvar = result.fun  # Minimum CVaR value
+    best_weights = result.x  # Best weights
+    return best_cvar, best_weights
+# 模拟退火算法
+def simulated_annealing(returns, confidence_level, initial_temperature=100, final_temperature=1, max_iter=1000):
+    n_stocks = returns.shape[0]
+    current_state = np.random.rand(n_stocks)  # Initialize current state
+    current_state /= np.sum(current_state) if np.sum(current_state) != 0 else 1  # Ensure sum is 1 (avoid division by 0)
+    current_value = objective_function(current_state, returns, confidence_level)
+    best_state = current_state
+    best_value = current_value
+    temperature = initial_temperature
+    for i in range(max_iter):
+        new_state = current_state + np.random.normal(0, 0.1, size=n_stocks)  # Generate new state
+        new_state /= np.sum(new_state) if np.sum(new_state) != 0 else 1  # Ensure sum is 1 (avoid division by 0)
+        new_value = objective_function(new_state, returns, confidence_level)
+        delta = new_value - current_value
+        if delta < 0 or np.random.rand() < np.exp(-delta / temperature):  # Accept new state
+            current_state = new_state
+            current_value = new_value
+            if new_value < best_value:
+                best_state = new_state
+                best_value = new_value
+        temperature = initial_temperature * (final_temperature / initial_temperature) ** (i / max_iter)  # Reduce temperature
+    return best_value, best_state
+
+# 只使用 scipy.optimize 进行优化
+def minimize_cvar_scipy(returns, confidence_level):
     n_stocks = returns.shape[0]
     initial_weights = np.random.rand(n_stocks)
     initial_weights = initial_weights / np.sum(initial_weights)
     bounds = [(0, 1) for _ in range(n_stocks)]
-    constraints = [{'type': 'eq', 'fun': constraint_function}]
+    constraints = [{'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1}]
+
     result = minimize(objective_function, initial_weights, args=(returns, confidence_level),
-                          bounds=bounds, constraints=constraints)
-    min_cvar = result.fun
-    optimal_weights = result.x
+                      bounds=bounds, constraints=constraints)
+    best_cvar = result.fun
+    best_portfolio = result.x
+    return best_cvar, best_portfolio
+# minimize_cvar 函数
+def minimize_cvar(returns, confidence_level):
+    method = para.CVaR_method
+    if method == "differential_evolution":
+        min_cvar, optimal_weights = differential_evolution(returns, confidence_level)
+    elif method == "minimize_cvar_scipy":
+        min_cvar, optimal_weights = minimize_cvar_scipy(returns, confidence_level)
+    elif method == "genetic_algorithm":
+        min_cvar, optimal_weights = genetic_algorithm(returns, confidence_level)
+    elif method == "simulated_annealing":
+        min_cvar, optimal_weights = simulated_annealing(returns, confidence_level)
+    elif method == "bayesian_optimization":
+        min_cvar, optimal_weights = bayesian_optimization(returns, confidence_level)
+    else:
+        raise ValueError("Invalid CVaR_method specified in para")
+    optimal_weights = np.array(optimal_weights)
     return min_cvar, optimal_weights
 
 # 计算回撤
@@ -144,6 +273,8 @@ def calculate_information_ratio(data_strategy, data_benchmark, risk_free_rate):
 def calculate_return_drawdown_ratio(index_annual_return, max_drawdown):
     return index_annual_return / max_drawdown if max_drawdown != 0 else 0
 
+
+# def rolling_train(train_data_min_months,train_update_months,start_date,roll_back,confidence_level):
 # 训练部分
 train_data_min_months = para.train_min_months  # 每次模型训练所用数据最少不低于
 train_data_max_months = para.train_max_months  # 每次模型训练所用数据最大不超过
@@ -258,22 +389,25 @@ while end_date <= para.max_date:
     factor_weights_coef = abs(coefficients) / sum(abs(coefficients))
 
     # 基于因子数据集的特征值，特征值大的权重高
-    # 基于协方差矩阵
     covariance_matrix = X_in_sample.cov()
-    # 计算协方差矩阵的逆
-    inverse_covariance_matrix = np.linalg.inv(covariance_matrix)
     # 计算特征值和特征向量
-    eigenvalues, _ = np.linalg.eig(inverse_covariance_matrix)
+    eigenvalues, _ = np.linalg.eig(covariance_matrix)
     # 使用特征值作为权重
     weights = eigenvalues / np.sum(eigenvalues)  # 归一化
+    # 找到最高的两个因子的索引
+    top_two_indices = np.argsort(weights)[-2:]
+    # 计算最高的两个因子的权重总和
+    sum_top_weights = np.sum(weights[top_two_indices])
+    # 将最高的两个因子的权重设置为20%，按比例分配
+    weights[top_two_indices] = 0.2 * (weights[top_two_indices] / sum_top_weights)
+    # 计算除最高的两个因子外其他因子的总权重
+    other_weights = np.sum(weights) - np.sum(weights[top_two_indices])
+    # 将其他因子的权重按比例调整为80%
+    weights[:-2] = weights[:-2] * (0.8 * other_weights / np.sum(weights[:-2]))
+    # 将调整后的权重赋值给原始变量
+    weights = weights  # 最终的变量名不变
     # 创建权重分配的 DataFrame
     factor_weights = pd.DataFrame({'Factor': X_in_sample.columns, 'Weight': weights})
-    # 调整权重为正数并归一化
-    factor_weights['Weight'] = factor_weights['Weight'] - min(factor_weights['Weight'])
-    factor_weights['Weight'] = factor_weights['Weight'] / sum(factor_weights['Weight'])
-    # 确保所有权重为正数并且总和为1
-    # factor_weights['Weight'] = factor_weights['Weight'].apply(lambda x: max(x, 0))  # 确保所有权重大于等于0
-    # factor_weights['Weight'] = factor_weights['Weight'] / sum(factor_weights['Weight'])  # 归一化
     factor_weights_corr = np.array(factor_weights['Weight'])
 
     # 样本外预测
@@ -294,7 +428,7 @@ while end_date <= para.max_date:
         # -- generate X
         X_curr_month = data_curr_month.loc[:, 'EP':'bias']
         # -- pca
-        pca = PCA(n_components=16)
+        pca = PCA(n_components = 16)
         X_in_sample = pca.fit_transform(X_in_sample)
         X_curr_month = pca.fit_transform(X_curr_month)
         # -- pca_train
@@ -429,7 +563,7 @@ while end_date <= para.max_date:
         cov_matrix_coef = top_select_stocks_return_coef.T.cov()
         cov_matrix_ic = top_select_stocks_return_ic.T.cov()
         cov_matrix_corr = top_select_stocks_return_corr.T.cov()
-        # 获取 i_month_1 对应的收益均值和股票代码
+        # 获取 i_month_1 对应的预测收益和股票代码
         mean_returns_coef = top_select_stocks_return_coef.loc[:, i_month_1]
         stock_codes_coef = top_select_stocks_return_coef.index.tolist()
         mean_returns_ic = top_select_stocks_return_ic.loc[:, i_month_1]
@@ -915,8 +1049,3 @@ weights_data_combined_cvar_corr.to_excel(writer, sheet_name='weights_data_combin
 return_data_combined_hs300.to_excel(writer, sheet_name='return_data_combined_hs300', index=False)
 # 保存Excel文件
 writer.close()
-
-#选的股票数量增加，表现并不好
-#min,max,reback均影响VaR和CVaR的拟合
-#收益率最佳的结果：min=60; max=80; reback=40; select=20;
-#策略对比不错的结果：min=54; max=78; reback=40; select=20;
