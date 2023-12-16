@@ -4,7 +4,6 @@ import pandas as pd
 import datetime
 import xlsxwriter
 import warnings
-warnings.filterwarnings('ignore')
 import os
 from scipy.optimize import minimize
 import cvxpy as cp
@@ -12,7 +11,14 @@ from random import random, randint
 from skopt import gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
+from skopt import gp_minimize
+from skopt.learning import GaussianProcessRegressor
+from skopt.learning.gaussian_process.kernels import Matern
 from scipy.optimize import Bounds
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, SolverFactory, summation
+import nlopt
+from functools import partial
+warnings.filterwarnings('ignore')
 
 # hs300名单 2022.1.1之前
 hs300 = pd.read_csv(r'../hs300_2005-2022/hs300_monthly.csv', dtype=object)
@@ -41,17 +47,21 @@ class Para():
     seed = 42  # -- random seed
     n_stock = 5166
     #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
-    #min=36,max=48,update=3,back=24，select=20的表现可以
-    train_start_test = 129 #测试集最早从第129个月开始
-    train_min_months = 36 #训练最少使用数据量
-    train_start_month = train_start_test - train_min_months #训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
+    # min=36,max=48,update=3,back=24，select=20的表现可以
+    # train_start_test = 130  #测试集最早从第130个月开始 if min<45
+    train_min_months = 69 #训练最少使用数据量
+    train_start_month = 95 #训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
     train_max_months = 48 #训练最多使用数据量
-    train_update_months = 3 #训练轮动周期
+    train_update_months = 10 #训练轮动周期
     max_date = 284
-    max_select = 20 #选股最多数量
-    roll_back = 24 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
-    CVaR_method = "simulated_annealing"  # "differential_evolution", "minimize_cvar_scipy", "genetic_algorithm", "simulated_annealing", "bayesian_optimization"
-    confidence_level = 0.99 #置信水平
+    max_select = 46 #选股最多数量
+    roll_back = 48 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
+    CVaR_method = "minimize_cvar_scipy"
+    # 优化算法
+    # "differential_evolution", "genetic_algorithm", "simulated_annealing",
+    # "bayesian_optimization", "particle_swarm_optimization"
+    # "nlopt_optimization", "minimize_cvar_scipy"
+    confidence_level = 0.95 #置信水平
     risk_free_rate = 0  # 无风险利率假设为0
     y_data = 'curr_return'  #'curr_return' ,'excess_return_curr','next_return','excess_return_next'
 para = Para()
@@ -97,16 +107,32 @@ def calculate_cvar(portfolio_returns, confidence_level):
     cvar = var + (1 / (len(portfolio_returns) * (1 - confidence_level))) * np.sum(
         np.maximum(loss_function - var, 0))
     return cvar
+
 def objective_function(weights, returns, confidence_level):
     portfolio_returns = calculate_portfolio_returns(returns, weights)
     cvar = calculate_cvar(portfolio_returns, confidence_level)
     return cvar
+def constraint_function(weights):
+    return np.sum(weights) - 1
+def minimize_cvar_scipy(returns, confidence_level):
+    n_stocks = returns.shape[0]
+    initial_weights = np.random.rand(n_stocks)
+    initial_weights = initial_weights / np.sum(initial_weights)
+    bounds = [(0, 1) for _ in range(n_stocks)]
+    constraints = [{'type': 'eq', 'fun': constraint_function}]
+    result = minimize(objective_function, initial_weights, args=(returns, confidence_level),
+                      bounds=bounds, constraints=constraints)
+    min_cvar = result.fun
+    optimal_weights = result.x
+    return min_cvar, optimal_weights
 # 差分进化算法优化
 def differential_evolution(returns, confidence_level, population_size=50, max_generations=100,
                            F=0.5, CR=0.7):
+    def clip_weights(weights):
+        return np.clip(weights, 1e-9, 1.0 - 1e-9) / np.sum(np.clip(weights, 1e-9, 1.0 - 1e-9))
     n_stocks = returns.shape[0]
     population = np.random.rand(population_size, n_stocks)
-    population /= np.sum(population, axis=1)[:, np.newaxis]  # 确保权重总和为1
+    population = np.apply_along_axis(clip_weights, 1, population)  # 确保权重总和为1，且在（0，1）范围内
     for gen in range(max_generations):
         for i in range(population_size):
             target_vector = population[i]
@@ -116,14 +142,19 @@ def differential_evolution(returns, confidence_level, population_size=50, max_ge
             mutant_vector = population[a] + F * (population[b] - population[c])
             crossover_mask = np.random.rand(n_stocks) < CR
             trial_vector = np.where(crossover_mask, mutant_vector, target_vector)
-            trial_vector /= np.sum(trial_vector)  # 确保权重总和为1
-            if objective_function(trial_vector, returns, confidence_level) < objective_function(target_vector, returns, confidence_level):
+            trial_vector = clip_weights(trial_vector)  # 确保权重总和为1，且在（0，1）范围内
+            if objective_function(trial_vector, returns, confidence_level) < objective_function(target_vector, returns,
+                                                                                                confidence_level):
                 population[i] = trial_vector
     best_portfolio = min(population, key=lambda x: objective_function(x, returns, confidence_level))
+    best_portfolio = clip_weights(best_portfolio)  # 确保权重总和为1，且在（0，1）范围内
     best_cvar = objective_function(best_portfolio, returns, confidence_level)
     return best_cvar, best_portfolio
 # 定义遗传优化函数
 def genetic_algorithm(returns, confidence_level, pop_size=50, generations=100, mutation_rate=0.1):
+    def clip_weights(weights):
+        clipped = np.clip(weights, 1e-9, 1.0 - 1e-9)  # 将权重限制在（0，1）范围内
+        return clipped / np.sum(clipped)  # 确保权重总和为1
     def initialize_population(pop_size, n_stocks):
         population = []
         for _ in range(pop_size):
@@ -141,14 +172,12 @@ def genetic_algorithm(returns, confidence_level, pop_size=50, generations=100, m
     def crossover(parent1, parent2):
         split = randint(1, len(parent1) - 1)
         child = np.concatenate((parent1[:split], parent2[split:]), axis=0)
-        child /= np.sum(child)  # 确保权重总和为1
-        return child
+        return clip_weights(child)  # 使用裁剪函数确保权重范围和总和
     def mutation(child, mutation_rate=0.1):
         for i in range(len(child)):
             if random() < mutation_rate:
                 child[i] = random()
-        child /= np.sum(child)  # 确保权重总和为1
-        return child
+        return clip_weights(child)  # 使用裁剪函数确保权重范围和总和
     n_stocks = returns.shape[0]
     population = initialize_population(pop_size, n_stocks)
     for gen in range(generations):
@@ -162,32 +191,15 @@ def genetic_algorithm(returns, confidence_level, pop_size=50, generations=100, m
             offspring = mutation(offspring, mutation_rate)
             next_gen.append(offspring)
         population = next_gen
-    best_portfolio = min(population, key=lambda x: objective_function(x, returns, confidence_level))
+    best_portfolio = min(population, key=lambda x: objective_function(clip_weights(x), returns, confidence_level))
+    best_portfolio = clip_weights(best_portfolio)  # 最终确认最佳投资组合的权重范围和总和
     best_cvar = objective_function(best_portfolio, returns, confidence_level)
     return best_cvar, best_portfolio
-# 贝叶斯优化函数
-# Define the objective function for Bayesian optimization
-def bayesian_optimization(returns, confidence_level):
-    n_stocks = returns.shape[0]
-    # Define the search space for weights [0, 1] for each stock
-    space = [Real(0.0, 1.0, name=f'w{i}') for i in range(n_stocks)]
-    @use_named_args(space)
-    def objective_function_wrapper(**params):
-        weights = [params[f'w{i}'] for i in range(n_stocks)]
-        weights /= np.sum(weights)  # Ensure sum of weights equals 1
-        return objective_function(weights, returns, confidence_level)
-    # Perform Bayesian optimization
-    result = gp_minimize(
-        objective_function_wrapper,
-        dimensions=space,
-        n_calls=20,
-        random_state=para.seed
-    )
-    best_cvar = result.fun  # Minimum CVaR value
-    best_weights = result.x  # Best weights
-    return best_cvar, best_weights
 # 模拟退火算法
 def simulated_annealing(returns, confidence_level, initial_temperature=100, final_temperature=1, max_iter=1000):
+    def clip_weights(weights):
+        clipped = np.clip(weights, 1e-9, 1.0 - 1e-9)  # 将权重限制在（0，1）范围内
+        return clipped / np.sum(clipped)  # 确保权重总和为1
     n_stocks = returns.shape[0]
     current_state = np.random.rand(n_stocks)  # Initialize current state
     current_state /= np.sum(current_state) if np.sum(current_state) != 0 else 1  # Ensure sum is 1 (avoid division by 0)
@@ -197,7 +209,7 @@ def simulated_annealing(returns, confidence_level, initial_temperature=100, fina
     temperature = initial_temperature
     for i in range(max_iter):
         new_state = current_state + np.random.normal(0, 0.1, size=n_stocks)  # Generate new state
-        new_state /= np.sum(new_state) if np.sum(new_state) != 0 else 1  # Ensure sum is 1 (avoid division by 0)
+        new_state = clip_weights(new_state)  # 使用裁剪函数确保权重范围和总和
         new_value = objective_function(new_state, returns, confidence_level)
         delta = new_value - current_value
         if delta < 0 or np.random.rand() < np.exp(-delta / temperature):  # Accept new state
@@ -208,6 +220,92 @@ def simulated_annealing(returns, confidence_level, initial_temperature=100, fina
                 best_value = new_value
         temperature = initial_temperature * (final_temperature / initial_temperature) ** (i / max_iter)  # Reduce temperature
     return best_value, best_state
+
+# 贝叶斯优化函数
+# Define the objective function for Bayesian optimization
+def bayesian_optimization(returns, confidence_level):
+    def clip_weights(weights):
+        clipped = np.clip(weights, 1e-9, 1.0 - 1e-9)
+        clipped /= np.sum(clipped)
+        return clipped
+
+    n_stocks = returns.shape[0]
+    space = [Real(0.0, 1.0, name=f'w{i}') for i in range(n_stocks)]
+    @use_named_args(space)
+    def objective_function_wrapper(**params):
+        weights = [params[f'w{i}'] for i in range(n_stocks)]
+        weights = clip_weights(weights)
+        portfolio_returns = calculate_portfolio_returns(returns, weights)
+        return calculate_cvar(portfolio_returns, confidence_level)
+    kernel = 1.0 * Matern(length_scale=1.0, length_scale_bounds=(1e-1, 10.0), nu=2.5)
+    gp = GaussianProcessRegressor(kernel=kernel)
+    result = gp_minimize(
+        objective_function_wrapper,
+        dimensions=space,
+        n_calls=20,
+        random_state=para.seed,
+        base_estimator=gp
+    )
+    best_cvar = result.fun  # Minimum CVaR value
+    best_weights = clip_weights(result.x)
+    return best_cvar, best_weights
+
+
+def particle_swarm_optimization(returns, confidence_level, num_particles=50, max_iter=100, inertia=0.5, c1=2.0, c2=2.0):
+    def clip_weights(weights):
+        clipped = np.clip(weights, 1e-9, 1.0 - 1e-9)  # 将权重限制在（0，1）范围内
+        return clipped / np.sum(clipped)  # 确保权重总和为1
+    n_stocks = returns.shape[0]
+    # Initialize particles and velocities
+    particles = np.random.rand(num_particles, n_stocks)
+    velocities = np.random.rand(num_particles, n_stocks)
+    # Initialize the best-known positions and values for particles
+    personal_best = particles.copy()
+    personal_best_value = np.array([objective_function(particle, returns, confidence_level) for particle in particles])
+    # Find global best position and value
+    global_best_idx = np.argmin(personal_best_value)
+    global_best = personal_best[global_best_idx]
+    global_best_value = personal_best_value[global_best_idx]
+    for _ in range(max_iter):
+        for i in range(num_particles):
+            # Update particle velocity
+            velocities[i] = inertia * velocities[i] + c1 * np.random.rand() * (
+                        personal_best[i] - particles[i]) + c2 * np.random.rand() * (global_best - particles[i])
+            # Update particle position
+            particles[i] = clip_weights(particles[i] + velocities[i])
+            # Update personal best
+            particle_value = objective_function(particles[i], returns, confidence_level)
+            if particle_value < personal_best_value[i]:
+                personal_best[i] = particles[i]
+                personal_best_value[i] = particle_value
+                # Update global best
+                if particle_value < global_best_value:
+                    global_best = particles[i]
+                    global_best_value = particle_value
+    return global_best_value, global_best
+
+
+def nlopt_optimization(returns, confidence_level):
+    def clip_weights(weights, n):
+        clipped = np.clip(weights, 1e-9, 1.0 - 1e-9)  # 将权重限制在（0，1）范围内
+        return clipped / np.sum(clipped)  # 确保权重总和为1
+    n_stocks = returns.shape[0]
+    # 定义目标函数
+    def objective_function(weights, grad, returns=returns, confidence_level=confidence_level):
+        portfolio_returns = calculate_portfolio_returns(returns, weights)
+        cvar = calculate_cvar(portfolio_returns, confidence_level)
+        return cvar
+    opt = nlopt.opt(nlopt.LD_MMA, n_stocks)  # 选择优化算法
+    opt.set_min_objective(objective_function)  # 设置最小化目标函数
+    opt.set_lower_bounds(np.zeros(n_stocks))  # 设置下界为0
+    opt.set_upper_bounds(np.ones(n_stocks))  # 设置上界为1
+    opt.set_ftol_rel(1e-4)  # 设置相对容忍度
+    initial_guess = np.random.rand(n_stocks)  # 初始化权重
+    opt.set_initial_step(initial_guess * 0.1)  # 设置初始步长
+    result = opt.optimize(initial_guess)  # 进行优化
+    best_weights = clip_weights(result, n_stocks)  # 最终确认最佳权重的范围和总和
+    best_value = objective_function(best_weights, None)  # 计算最优值
+    return best_value, best_weights
 
 # 只使用 scipy.optimize 进行优化
 def minimize_cvar_scipy(returns, confidence_level):
@@ -227,14 +325,18 @@ def minimize_cvar(returns, confidence_level):
     method = para.CVaR_method
     if method == "differential_evolution":
         min_cvar, optimal_weights = differential_evolution(returns, confidence_level)
-    elif method == "minimize_cvar_scipy":
-        min_cvar, optimal_weights = minimize_cvar_scipy(returns, confidence_level)
     elif method == "genetic_algorithm":
         min_cvar, optimal_weights = genetic_algorithm(returns, confidence_level)
     elif method == "simulated_annealing":
         min_cvar, optimal_weights = simulated_annealing(returns, confidence_level)
     elif method == "bayesian_optimization":
         min_cvar, optimal_weights = bayesian_optimization(returns, confidence_level)
+    elif method == "particle_swarm_optimization":
+        min_cvar, optimal_weights = particle_swarm_optimization(returns, confidence_level)
+    elif method == "nlopt_optimization":
+        min_cvar, optimal_weights = nlopt_optimization(returns, confidence_level)
+    elif method == "minimize_cvar_scipy":
+        min_cvar, optimal_weights = minimize_cvar_scipy(returns, confidence_level)
     else:
         raise ValueError("Invalid CVaR_method specified in para")
     optimal_weights = np.array(optimal_weights)
@@ -575,7 +677,7 @@ while end_date <= para.max_date:
         portfolio_weights_coef = calculate_portfolio_weights(mean_returns_coef, cov_matrix_coef)
         portfolio_weights_ic = calculate_portfolio_weights(mean_returns_ic, cov_matrix_ic)
         portfolio_weights_corr = calculate_portfolio_weights(mean_returns_corr, cov_matrix_corr)
-        
+
         # 使用CVaR计算最优权重
         confidence_level = para.confidence_level
         returns_cvar_coef = top_select_stocks_return_coef
@@ -796,6 +898,17 @@ results_df = pd.DataFrame(results)
 # 将DataFrame输出到Excel文件
 results_df.to_excel(para.path_results + 'evaluation results.xlsx', index=False)
 print(results_df)
+
+
+# Rows to subtract: 2nd from 1st, 4th from 3rd, and 6th from 5th
+rows_to_subtract = [1, 3, 5]
+# Columns to exclude from subtraction
+columns_to_exclude = ['Column']  # Replace 'Column' with the actual name of the first column
+# Get columns except the ones to exclude
+columns_for_subtraction = [col for col in results_df.columns if col not in columns_to_exclude]
+# Perform row-wise subtraction excluding the specified columns
+results_evaluation  = results_df[columns_for_subtraction].diff().iloc[rows_to_subtract]
+
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
