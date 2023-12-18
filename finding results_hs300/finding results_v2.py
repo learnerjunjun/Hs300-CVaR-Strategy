@@ -49,19 +49,19 @@ class Para():
     #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
     # min=36,max=48,update=3,back=24，select=20的表现可以
     # train_start_test = 130  #测试集最早从第130个月开始 if min<45
-    train_min_months = 69 #训练最少使用数据量
-    train_start_month = 95 #训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
-    train_max_months = 48 #训练最多使用数据量
-    train_update_months = 10 #训练轮动周期
+    train_min_months = 35  # 训练最少使用数据量
+    train_start_month = 95  # 训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
+    train_max_months = 48  # 训练最多使用数据量
+    train_update_months = 5  # 训练轮动周期
     max_date = 284
-    max_select = 46 #选股最多数量
-    roll_back = 48 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
+    max_select = 43  # 选股最多数量
+    roll_back = 25  # 决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
     CVaR_method = "minimize_cvar_scipy"
     # 优化算法
     # "differential_evolution", "genetic_algorithm", "simulated_annealing",
     # "bayesian_optimization", "particle_swarm_optimization"
     # "nlopt_optimization", "minimize_cvar_scipy"
-    confidence_level = 0.95 #置信水平
+    confidence_level = 0.99  # 置信水平
     risk_free_rate = 0  # 无风险利率假设为0
     y_data = 'curr_return'  #'curr_return' ,'excess_return_curr','next_return','excess_return_next'
 para = Para()
@@ -70,15 +70,20 @@ para = Para()
 # 基于信息系数大小的权重分配
 # 与下一期收益率更高的因子有更高的权重
 def assign_weight_by_coefficient(information_coefficient):
-    # 计算IC值绝对值总和
-    ic_sum = abs(information_coefficient['IC']).sum()
-    # 更改阈值为0.03
-    threshold = 0.03
-    # 分配权重
-    information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.6 * (
-            abs(information_coefficient['IC']) / ic_sum)
-    information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.4 * (
-            (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
+    method = "threshold"
+    if method == "init":     # 原始权重
+        ic_sum = abs(information_coefficient['IC']).sum()
+        information_coefficient['Weight'] = abs(information_coefficient['IC']) / ic_sum
+    elif method == "threshold": # 权重调整
+        # 计算IC值绝对值总和
+        ic_sum = abs(information_coefficient['IC']).sum()
+        # 更改阈值为0.03
+        threshold = 0.03
+        # 分配权重
+        information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
+                abs(information_coefficient['IC']) / ic_sum)
+        information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.5 * (
+                (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
     return information_coefficient
 
 # 优化器-1

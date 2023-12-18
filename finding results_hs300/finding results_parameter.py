@@ -35,12 +35,12 @@ class Para():
     #以下都是需要调整的参数，包括数据量、轮动周期及选股数量
     # min=36,max=48,update=3,back=24，select=20的表现可以
     # train_start_test = 130  #测试集最早从第130个月开始 if min<45
-    train_min_months = 60 #训练最少使用数据量
+    train_min_months = 36 #训练最少使用数据量
     train_start_month = 85 #训练开始时间 或者从94开始，避免回撤过大，年均收益率更高
     train_max_months = 48 #训练最多使用数据量
     train_update_months = 3 #训练轮动周期
     max_date = 284
-    max_select = 20 #选股最多数量
+    max_select = 30 #选股最多数量
     roll_back = 24 #决策集回溯地历史数据，从12个月开始调整，间隔周期为6个月，18个月长期收益表现可以
     CVaR_method = "minimize_cvar_scipy"
     # 优化算法
@@ -57,15 +57,20 @@ def rolling_train(parameters):
     # 基于信息系数大小的权重分配
     # 与下一期收益率更高的因子有更高的权重
     def assign_weight_by_coefficient(information_coefficient):
-        # 计算IC值绝对值总和
-        ic_sum = abs(information_coefficient['IC']).sum()
-        # 更改阈值为0.03
-        threshold = 0.03
-        # 分配权重
-        information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.6 * (
-                abs(information_coefficient['IC']) / ic_sum)
-        information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.4 * (
-                (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
+        method = "threshold"
+        if method == "init":  # 原始权重
+            ic_sum = abs(information_coefficient['IC']).sum()
+            information_coefficient['Weight'] = abs(information_coefficient['IC']) / ic_sum
+        elif method == "threshold":
+            # 计算IC值绝对值总和
+            ic_sum = abs(information_coefficient['IC']).sum()
+            # 更改阈值为0.03
+            threshold = 0.03
+            # 分配权重
+            information_coefficient.loc[abs(information_coefficient['IC']) > threshold, 'Weight'] = 0.5 * (
+                    abs(information_coefficient['IC']) / ic_sum)
+            information_coefficient.loc[abs(information_coefficient['IC']) <= threshold, 'Weight'] = 0.5 * (
+                    (threshold - abs(information_coefficient['IC'])) / (1 - ic_sum))
         return information_coefficient
 
     # 优化器-1
@@ -535,14 +540,14 @@ def rolling_train(parameters):
 
 from bayes_opt import BayesianOptimization
 # 定义目标函数
-def objective_function(train_min_months, train_update_months, roll_back, max_select): #, confidence_level):
+def objective_function(train_min_months, train_update_months, roll_back): #max_select, confidence_level):
     try:
         # 创建 Para 类的实例并设置参数值
         para = Para()
         para.train_min_months = int(round(train_min_months))
         para.train_update_months = int(round(train_update_months))
         para.roll_back = int(round(roll_back))
-        para.max_select = int(round(max_select))
+        # para.max_select = int(round(max_select))
         # para.confidence_level = round(confidence_level, 2)  # 保留两位小数
         # 执行滚动训练
         results_evaluation = rolling_train(para)
@@ -558,8 +563,8 @@ def objective_function(train_min_months, train_update_months, roll_back, max_sel
 pbounds = {
     'train_min_months': (24, 84),
     'train_update_months': (3, 12),
-    'roll_back': (12, 72),
-    'max_select': (10, 50),
+    'roll_back': (12, 72)
+    #'max_select': (10, 50),
     #'confidence_level': (0.95, 0.99)
 }
 # 初始化贝叶斯优化器
